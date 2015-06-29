@@ -1,6 +1,6 @@
 # Funcular.IdGenerators
 
-A cross-process thread-safe C# utility to create ascending (but non-sequential), human speakable, case-insensitive, pseudo-random identifiers in Base36.
+A cross-process thread-safe C# utility to create ascending (but non-sequential), human speakable, case-insensitive, pseudo-random identifiers in Base36. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*.
 
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
 * Base36 [16]: `040VZ3C6SL3BZ2RW` or `040V-Z3C6-SL3B-Z2RW` 
@@ -9,7 +9,6 @@ A cross-process thread-safe C# utility to create ascending (but non-sequential),
 * SQL IDENTITY columns couple Id assignment with a database connection, creating a single point of failure, and restricting the ability to create object graphs in a disconnected operation.
 * Guids / SQL UNIQUEIDENTIFIERs are terrible for clustered indexing, are not practically speakable, and look ugly.
 * Sequential Guids / SQL SEQUENTIALIDs are extremely cumbersome to manage, aren't synchronized between app servers and database servers, nor in distributed environments. They also create tight coupling between application processes and the database server.
-
 
 #### Requirements Met
 * Ids must be ascending across a distributed environment
