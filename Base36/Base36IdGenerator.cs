@@ -3,7 +3,7 @@
 // *********************************************************************************************************
 // Funcular.IdGenerators>Funcular.IdGenerators>Base36IdGenerator.cs
 // Created: 2015-06-26 2:57 PM
-// Updated: 2015-06-26 3:08 PM
+// Updated: 2015-06-29 4:00 PM
 // By: Paul Smith 
 // 
 // *********************************************************************************************************
@@ -38,21 +38,15 @@
 #region Usings
 
 using System;
-using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
-using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
-using System.Timers;
-using Funcular.IdGenerators.BaseConversion;
 using Funcular.ExtensionMethods;
-using Random = System.Random;
-using Timer = System.Timers.Timer;
+using Funcular.IdGenerators.BaseConversion;
+
 #endregion
 
 
@@ -61,44 +55,43 @@ namespace Funcular.IdGenerators.Base36
 {
     public class Base36IdGenerator
     {
-        private readonly int _numTimestampCharacters;
-        private readonly int _numServerCharacters;
-        private readonly int _numRandomCharacters;
-
-
-
         #region Private fields
 
-        private static readonly string _hostHash;
-        private static readonly DateTime _lastInitialized = DateTime.UtcNow;
-        private static readonly object _rndLock = new object();
-        private static readonly object _microsecondsLock = new object();
-        private static readonly Mutex _mutex;
-        private static long _lastMicroseconds;
+        private static readonly object _timestampLock = new object();
+        private static readonly object _randomLock = new object();
+        private static readonly Mutex _timestampMutex;
+        private static readonly Mutex _randomMutex;
+        private static string _hostHash;
         // reserved byte, start at the max Base36 value, can decrement 
         // up to 35 times when values are exhausted (every ~115 years),
         // or repurpose as a discriminator if desired:
-        private static int _reserved = 35;
-        private static string _reservedHash;
-
+        //private static int _reserved = 35;
+        //private static string _reservedHash;
+        /// <summary>
+        ///     This is UTC Epoch. In shorter Id implementations it was configurable, to allow
+        ///     one to milk more longevity out of a shorter series of timestamps.
+        /// </summary>
         private static DateTime _inService = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         /// <summary>
-        ///     Field initializer never fires
+        ///     The timespan representing from Epoch until instantiated.
         /// </summary>
-        private static readonly MD5 _md5; 
+        private static TimeSpan _timeZero;
+
+        private static readonly DateTime _lastInitialized = DateTime.UtcNow;
+        private static long _lastMicroseconds;
 
         private static readonly Random _rnd;
         private static readonly Stopwatch _sw;
-        private static readonly long _oneYearInMicroseconds = TimeSpan.FromDays(365.25*115).TotalMicroseconds();
-        private static readonly long _maxRandom; // default = 36 ^ 3 - 1: 46655;
-        private static TimeSpan _timeZero; 
+
         private static SpinLock _locker = new SpinLock(true);
-        
-        private Timer _checkReservedTimer;
-        private bool _shouldCheckReserved;
-        private bool _unsafeAllowed;
-        private string _reservedValue;
+        private readonly string _delimiter;
+        private readonly int[] _delimiterPositions;
+        private readonly long _maxRandom;
+        private readonly int _numRandomCharacters;
+        private readonly int _numServerCharacters;
+        private readonly int _numTimestampCharacters;
+        private readonly string _reservedValue;
 
         #endregion
 
@@ -110,10 +103,6 @@ namespace Funcular.IdGenerators.Base36
 
         public DateTime InServiceDate { get { return _inService; } }
 
-        public string Reserved { get { return _reservedHash ?? (_reservedHash = Base36Converter.FromInt32(_reserved)); } }
-
-        public bool UnsafeAllowed { get { return this._unsafeAllowed; } set { this._unsafeAllowed = value; } }
-
         #endregion
 
 
@@ -121,40 +110,40 @@ namespace Funcular.IdGenerators.Base36
         #region Constructors
 
         /// <summary>
-        ///     Static constructor never fires
+        ///     Static constructor
         /// </summary>
         static Base36IdGenerator()
         {
             Debug.WriteLine("Static constructor fired");
             // TODO: Include inception date in mutex name to reduce vulnerability
-            // todo  to malicious DOS use (obscure the name).     
-            _mutex = new Mutex(false, @"Global\Base36IdGeneratorMicroseconds");
-            _md5 = MD5.Create();
+            // todo... to malicious use / DOS attacks (so, obscure the name).     
+            _timestampMutex = new Mutex(false, @"Global\Base36IdGeneratorTimestamp");
+            _randomMutex = new Mutex(false, @"Global\Base36IdGeneratorRandom");
             _rnd = new Random();
-            new Regex("[^0-9a-zA-Z]", RegexOptions.Compiled);
-            _hostHash = ComputeHostHash().PadLeft(2, '0');
-            _reservedHash = Base36Converter.FromInt32(_reserved);
-            _rndLock = new object();
+            _randomLock = new object();
             _timeZero = _lastInitialized.Subtract(_inService);
             _sw = Stopwatch.StartNew();
-            _maxRandom = 46655;
         }
 
         /// <summary>
-        ///     Instance constructor never fires
+        ///     Instance constructor
         /// </summary>
-        public Base36IdGenerator(int numTimestampCharacters = 10, int numServerCharacters = 2, int numRandomCharacters = 3, string reservedValue = null)
+        public Base36IdGenerator(int numTimestampCharacters = 10, int numServerCharacters = 2, int numRandomCharacters = 3, string reservedValue = "", string delimiter = null, int[] delimiterPositions = null)
         {
+            // throw if any argument would cause out-of-range exceptions
+            validateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
+
             this._numTimestampCharacters = numTimestampCharacters;
             this._numServerCharacters = numServerCharacters;
             this._numRandomCharacters = numRandomCharacters;
             this._reservedValue = reservedValue;
-            //System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(Base36IdGenerator).TypeHandle);
+            this._delimiter = delimiter;
+            this._delimiterPositions = delimiterPositions;
+
+            this._maxRandom = (long) Math.Pow(36d, numRandomCharacters);
+            _hostHash = ComputeHostHash();
+
             Debug.WriteLine("Instance constructor fired");
-            this._checkReservedTimer = new Timer();
-            this._checkReservedTimer.Elapsed += tmr_Elapsed;
-            this._checkReservedTimer.Interval = 10000;
-            this._checkReservedTimer.Start();
 
             string appSettingValue;
             if (ConfigurationManager.AppSettings.HasKeys()
@@ -170,49 +159,15 @@ namespace Funcular.IdGenerators.Base36
             initStaticMicroseconds();
         }
 
-        private void tmr_Elapsed(object sender, ElapsedEventArgs e)
-        {
-            checkReserved();
-        }
-
         #endregion
 
 
 
         #region Public methods
 
-        /*public Base36IdFields NewBase36Struct(string overrideHostString = null, byte? overrideReservedByte = null)
-        {
-            string tmp;
-            if (string.IsNullOrEmpty(overrideHostString) && null == overrideReservedByte)
-                tmp = NewBase36String();
-            else
-            {
-                byte[] origBase = getBytes(NewBase36String());
-                byte[] overrideHostBytes = getBytes(overrideHostString);
-                if (overrideHostBytes.Length > 0)
-                    origBase[10] = overrideHostBytes[0];
-                if (overrideHostBytes.Length > 1)
-                    origBase[11] = overrideHostBytes[1];
-                if (overrideReservedByte.HasValue)
-                    origBase[12] = overrideReservedByte.Value;
-                tmp = getString(origBase);
-            }
-            return Parse(tmp);
-            //return getString(origBase);
-        }*/
         /// <summary>
-        ///     Generates a new 16-character Base36 identifier with the 11th and 12th characters
-        ///     replaced by the first two characters of the value supplied for <paramref name="overrideHostString" />.
-        ///     If <paramref name="overrideReservedByte" /> is supplied, the
-        ///     reserved 13th bit (normally 'Z') will be replaced by it.
-        ///     Examples of overriding the host bytes might include re-purposing
-        ///     those characters for entity type identification, or for synchronizing
-        ///     a group of servers to issue ids in the same range. (This last example
-        ///     somewhat increases the possibility of a collision by about 1.5432 * 10⁻³).
+        ///     Generates a new Base36 identifier
         /// </summary>
-        /// <param name="overrideHostString"></param>
-        /// <param name="overrideReservedByte"></param>
         /// <returns></returns>
         /// <summary>
         ///     Generates a unique, sequential, Base36 string, 16 characters long.
@@ -223,19 +178,9 @@ namespace Funcular.IdGenerators.Base36
         ///     The last 3 characters are random number less than 46655 additional for additional uniqueness.
         /// </summary>
         /// <returns>Returns a unique, sequential, 16-character Base36 string</returns>
-        public string NewBase36String()
+        public string NewId()
         {
-            return NewBase36String(null);
-        }
-
-        public string NewBase36StringConcat()
-        {
-            string rndHexStr = getRandomDigitsLock();
-            long microseconds = GetMicrosecondsCrossProcess();
-            return Base36Converter.FromInt64(microseconds).PadLeft(10, '0')
-                   + _hostHash
-                   + _reservedHash
-                   + Base36Converter.FromHex(rndHexStr).PadLeft(3, '0');
+            return NewId(false);
         }
 
         /// <summary>
@@ -246,138 +191,113 @@ namespace Funcular.IdGenerators.Base36
         ///     The next 1 character is a reserved constant of 36 ('Z' in Base36).
         ///     The last 3 characters are random number less than 46655 additional for additional uniqueness.
         /// </summary>
-        /// <param name="delimiter">
-        ///     If provided, formats the ID as four groups of
-        ///     4 characters separated by the delimiter.
-        /// </param>
         /// <returns>Returns a unique, sequential, 16-character Base36 string</returns>
-        public string NewBase36String(string delimiter)
+        public string NewId(bool delimited)
         {
             // Keep access sequential so threads cannot accidentally
             // read another thread's values within this method:
-            // For 2 chars from host id MD5...
-            // string hostHash = (_hostHash ?? (_hostHash = ComputeHostHash()));
-
-            // 1 reserved char; static largest base36 digit.
-            // If the same ID system, scheme and sequence is still in use 
-            // more than 115.85 years after in-service date, decrements
-            // 'reserved' by 1 for each whole multiple of 115 years
-            // elapsed, up to 35 times max. If the same system, scheme
-            // and sequence is still in service 3,850 years from the
-            // initial go-live, you probably have bigger problems than 
-            // ID collisions...
-            string rndHexStr;
             StringBuilder sb;
             sb = new StringBuilder();
-            //lock (_lockObj)
-            //{
-            // 3 chars random in Base36 = 46656 units
-            rndHexStr = getRandomDigitsLock(); // this.UnsafeOkay ? getRandomDigitsUnsafe() : getRandomDigitsLock();
 
             // Microseconds since InService (using Stopwatch) provides the 
-            // first 10 chars:
-            //}
-            long microseconds = GetMicrosecondsCrossProcess();
-            sb.Append(Base36Converter.FromInt64(microseconds).PadLeft(10, '0'));
-            sb.Length = 10;
-            sb.Append(_hostHash); //.PadLeft(2, '0'));
-            sb.Length = 12;
-            sb.Append(_reservedHash);
-            sb.Length = 13;
-            sb.Append(Base36Converter.FromHex(rndHexStr).PadLeft(3, '0'));
-            sb.Length = 16;
-            if (!string.IsNullOrEmpty(delimiter))
+            // first n chars (n = _numTimestampCharacters):
+            long microseconds = GetMicrosecondsSafe();
+            string base36Microseconds = Base36Converter.FromInt64(microseconds);
+            if (base36Microseconds.Length > this._numTimestampCharacters)
+                base36Microseconds = base36Microseconds.Truncate(this._numTimestampCharacters);
+            sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
+
+            sb.Append(_hostHash);
+
+            if (this._reservedValue.HasValue())
             {
-                sb.Insert(12, delimiter);
-                sb.Insert(8, delimiter);
-                sb.Insert(4, delimiter);
+                sb.Append(this._reservedValue);
+                sb.Length += this._reservedValue.Length; // Truncates
+            }
+            // Add the random component:
+            sb.Append(getRandomBase36DigitsSafe());
+
+            if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
+                return sb.ToString();
+            foreach (int pos in this._delimiterPositions)
+            {
+                sb.Insert(pos, this._delimiter);
             }
             return sb.ToString();
         }
 
+        #endregion
+
+
+
+        #region Nonpublic methods
+
+        private static void validateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
+        {
+            if (numTimestampCharacters > 12)
+                throw new ArgumentOutOfRangeException("numTimestampCharacters", "The maximum characters in any component is 12.");
+            if (numServerCharacters > 12)
+                throw new ArgumentOutOfRangeException("numServerCharacters", "The maximum characters in any component is 12.");
+            if (numRandomCharacters > 12)
+                throw new ArgumentOutOfRangeException("numRandomCharacters", "The maximum characters in any component is 12.");
+
+            if (numTimestampCharacters < 0)
+                throw new ArgumentOutOfRangeException("numTimestampCharacters", "Number must not be negative.");
+            if (numServerCharacters < 0)
+                throw new ArgumentOutOfRangeException("numServerCharacters", "Number must not be negative.");
+            if (numRandomCharacters < 0)
+                throw new ArgumentOutOfRangeException("numRandomCharacters", "Number must not be negative.");
+        }
+
         /// <summary>
-        ///     Compresses the MD5 of this server's hostname by summing the bytes until the sum
-        ///     fits into two Base36 characters (&lt;= 36^2, or 1296):
+        ///     Base36 representation of the SHA1 of the hostname. The constructor argument
+        ///     numServerCharacters controls the maximum length of this hash.
         /// </summary>
         /// <returns>2 character Base36 checksum of MD5 of hostname</returns>
-        public static string ComputeHostHash()
+        public string ComputeHostHash()
         {
-            return Base36Converter.Encode(Math.Abs(Dns.GetHostName().GetHashCode()));
-            /*string hash = Base36Converter.Encode(
-                (_hostSum.HasValue ? _hostSum.Value : (
-                    _hostSum = getBytesSum(computeMd5(getHostBytes()), 36, 2)).Value));
-            return hash;*/
-        }
-
-        /// <summary>
-        ///     For internal use; use the parameterless overload for effeciency.
-        /// </summary>
-        /// <param name="host"></param>
-        /// <returns></returns>
-        public string ComputeHostHash(string host)
-        {
-            long sum = new long?(getBytesSum(computeMd5(host), 36, 2)).Value;
-            string hash = Base36Converter.Encode(sum);
-            return hash;
-        }
-
-        /*public Base36IdFields Parse(string value)
-        {
-            if (string.IsNullOrEmpty(value))
-                throw new ArgumentNullException(paramName: "value");
-            string ret = _regex.Replace(value, "").ToUpper();
-            if (ret.Length != 16)
-                throw new ArgumentException("Value was not a valid Base36 id", "value");
-
-            Base36IdFields fields = new Base36IdFields
+            string hostname = Dns.GetHostName();
+            if (!hostname.HasValue())
+                hostname = Environment.MachineName;
+            string hashHex;
+            using (var sha1 = new SHA1Managed())
             {
-                Id = ret,
-                HostHash = ret.Substring(10, 2),
-                Reserved = ret.Substring(12, 1),
-                InService = _inService
-            };
-            int pos = Base36Converter.CharList.IndexOf(fields.Reserved, StringComparison.Ordinal);
-            int centuryCycles = Math.Max(0, ((35 - pos) - 1));
-            // some precision is lost, as chars beyond 10 weren't originally from the timestamp 
-            // component of the ID:
-            int probableEncodedLength =
-                Base36Converter.FromInt64(InServiceDate.AddDays(365.25 * 115.89 * centuryCycles).Ticks / 10).Length;
-            if (centuryCycles == 0)
-                probableEncodedLength = 10;
-            string encodedMs = ret.Substring(0, probableEncodedLength);
-            long ms = Base36Converter.Decode(encodedMs);
-            fields.Microseconds = ms;
-            fields.CreatedRoughly = _inService.AddTicks(ms * 10); //.AddTicks((3656158440062976 * 10 + 9) * centuryCycles);
-            return fields;
-        }*/
+                hashHex = BitConverter.ToString(sha1.ComputeHash(Encoding.UTF8.GetBytes(hostname)));
+                if (hashHex.Length > 14) // > 14 chars overflows int64
+                    hashHex = hashHex.Truncate(14);
+            }
+            string hashBase36 = Base36Converter.FromHex(hashHex);
+            if (hashBase36.Length > this._numServerCharacters)
+                hashBase36 = hashBase36.Truncate(this._numServerCharacters);
+            return hashBase36;
+        }
+
         /// <summary>
-        ///     Returns value with all non base 36 characters removed.
+        ///     Returns value with all non base 36 characters removed. Uses mutex.
         /// </summary>
-        /// <param name="value"></param>
         /// <returns></returns>
         /// <summary>
         ///     Return the elapsed microseconds since the in-service DateTime; will never
         ///     return the same value twice, even across multiple processes.
         /// </summary>
         /// <returns></returns>
-        public static long GetMicrosecondsCrossProcess()
+        public static long GetMicrosecondsSafe()
         {
             try
             {
-                _mutex.WaitOne();
+                _timestampMutex.WaitOne();
                 long microseconds;
                 do
                 {
                     microseconds = (_timeZero.Add(_sw.Elapsed).TotalMicroseconds());
                 }
                 while (microseconds <= Thread.VolatileRead(ref _lastMicroseconds));
-                //Thread.VolatileWrite(ref this._lastMicroseconds, microseconds);
                 Interlocked.Exchange(ref _lastMicroseconds, microseconds);
                 return microseconds;
             }
             finally
             {
-                _mutex.ReleaseMutex();
+                _timestampMutex.ReleaseMutex();
             }
         }
 
@@ -389,7 +309,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns></returns>
         public static long GetMicroseconds()
         {
-            lock (_microsecondsLock)
+            lock (_timestampLock)
             {
                 long microseconds;
                 do
@@ -398,28 +318,11 @@ namespace Funcular.IdGenerators.Base36
                 }
                 while (microseconds <= Thread.VolatileRead(ref _lastMicroseconds));
                 Thread.VolatileWrite(ref _lastMicroseconds, microseconds);
-                //Interlocked.Exchange(ref _lastMicroseconds, microseconds);
                 return microseconds;
             }
         }
 
-        private void checkReserved()
-        {
-            this._shouldCheckReserved = _lastMicroseconds > _oneYearInMicroseconds;
-            if (this._shouldCheckReserved)
-            {
-                _reserved = 35 - Convert.ToInt32(_lastMicroseconds/3656158440062975);
-                _lastMicroseconds -= _oneYearInMicroseconds;
-            }
-        }
-
-        #endregion
-
-
-
-        #region Nonpublic methods
-
-        private void initStaticMicroseconds()
+        private static void initStaticMicroseconds()
         {
             _lastMicroseconds = GetMicroseconds();
         }
@@ -444,7 +347,7 @@ namespace Funcular.IdGenerators.Base36
                     //if (_spinLockTaken == false)
                     //{
                     _locker.Enter(ref lockTaken);
-                    value = _rnd.NextLong(_maxRandom);
+                    value = _rnd.NextLong(this._maxRandom);
                     break; //_rnd.Next(46655);
                     //}
                     // Do stuff...
@@ -461,101 +364,38 @@ namespace Funcular.IdGenerators.Base36
             return Base36Converter.Encode(value); //_rng.Value.Next(46655);// 
         }
 
-        private string getRandomDigitsUnsafe()
-        {
-            //lock (_lockObj)
-            long value = _rnd.NextLong(_maxRandom);
-            return Base36Converter.Encode(value);
-        }
-
-        private static string getRandomDigitsLock()
-        {
-            // NOTE: Using a mutex would enable cross-process locking.
-            lock (_rndLock)
-            {
-                long next = _rnd.NextLong(_maxRandom);
-                return Base36Converter.Encode(next);
-            }
-        }
-
-        private static byte[] computeMd5(string value)
-        {
-            return _md5.ComputeHash(getBytes(value));
-        }
-
-        private static byte[] computeMd5(byte[] value)
-        {
-            return _md5.ComputeHash(value);
-        }
-
         /// <summary>
-        ///     Recursively sums a byte array until the value will fit within
-        ///     <paramref name="maxChars" /> characters in the base specified by
-        ///     <paramref name="forBase" />.
-        /// </summary>
-        /// <param name="val">The byte array to checksum</param>
-        /// <param name="maxChars">The max number of characters to hold the checksum</param>
-        /// <param name="forBase">The base in which the checksum will be expressed</param>
-        /// <returns></returns>
-        private static long getBytesSum(byte[] val, int forBase, int maxChars)
-        {
-            long maxVal = Convert.ToInt64(Math.Pow(forBase, maxChars));
-            byte[] arr = val;
-            long tmp;
-            do
-            {
-                tmp = 0;
-                foreach (var t in arr)
-                {
-                    tmp += t;
-                }
-                arr = BitConverter.GetBytes(tmp);
-            }
-            while (tmp > maxVal);
-            return tmp; // arr.Where(b => b != 0).ToArray();
-        }
-
-        /// <summary>
-        ///     Returns a byte array containing the HostName if available, or
-        ///     else the mac address of the fastest non-loopback, non-tunnel
-        ///     NIC available. If neither can be determined, will default to an
-        ///     array of 6 bytes all set to 35.
+        ///     Gets random component of Id, pre trimmed and padded to the correct length
         /// </summary>
         /// <returns></returns>
-        private static byte[] getHostBytes()
+        private string getRandomBase36DigitsSafe()
         {
-            const int MIN_MAC_ADDR_LENGTH = 6;
-            byte[] defaultBytes = {35, 35, 35, 35, 35, 35};
-            byte[] retBytes = {0};
-            byte[] hostnameBytes = getBytes(Dns.GetHostName());
-            if (hostnameBytes.Length > 3)
-                retBytes = hostnameBytes;
-            else
+            if (_randomMutex.WaitOne())
             {
-                byte[] macBytes;
+                long random = _rnd.NextLong(this._maxRandom);
+                string encoded = Base36Converter.FromInt64(random);
                 try
                 {
-                    List<NetworkInterface> candidateInterfaces =
-                        NetworkInterface.GetAllNetworkInterfaces().ToList().Where(nw =>
-                            nw.NetworkInterfaceType != NetworkInterfaceType.Loopback
-                            && nw.NetworkInterfaceType != NetworkInterfaceType.Tunnel
-                            && nw.OperationalStatus == OperationalStatus.Up
-                            && nw.GetPhysicalAddress().GetAddressBytes().Length >= MIN_MAC_ADDR_LENGTH)
-                            .ToList();
-                    macBytes = candidateInterfaces.Max(nw => nw.GetPhysicalAddress().GetAddressBytes());
-                    if (macBytes.Length >= 6)
-                        retBytes = macBytes;
+                    return encoded.Length > this._numRandomCharacters ?
+                        encoded.Truncate(this._numRandomCharacters) :
+                        encoded.PadLeft(this._numRandomCharacters, '0');
                 }
-                catch (Exception ex)
-                { // back to default
-                    Trace.WriteLine(ex);
-                    macBytes = defaultBytes;
-                    retBytes = macBytes;
+                finally
+                {
+                    _randomMutex.ReleaseMutex();
                 }
             }
-            if ((retBytes).Length < 6)
-                retBytes = retBytes.Union(defaultBytes).ToArray();
-            return retBytes;
+            throw new AbandonedMutexException();
+        }
+
+        private string getRandomDigitsLock()
+        {
+            // NOTE: Using a mutex would enable cross-process locking.
+            lock (_randomLock)
+            {
+                long next = _rnd.NextLong(this._maxRandom);
+                return Base36Converter.Encode(next);
+            }
         }
 
         /// <summary>
@@ -577,8 +417,6 @@ namespace Funcular.IdGenerators.Base36
         {
             return Encoding.Default.GetString(bytes);
         }
-
-       
 
         #endregion
     }

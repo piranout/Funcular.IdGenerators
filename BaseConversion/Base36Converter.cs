@@ -60,7 +60,7 @@ namespace Funcular.IdGenerators.BaseConversion
         public static string FromHex(string hex)
         {
             BaseConverter.CharList = _charList;
-            return BaseConverter.Convert(hex, 16, 36);
+            return BaseConverter.Convert(hex.ToUpper(), 16, 36);
         }
 
         public static string FromGuid(Guid guid)
