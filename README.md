@@ -1,20 +1,17 @@
-﻿# Funcular.IdGenerators
+# Funcular.IdGenerators
 
 A cross-process thread-safe C# utility to create ascending (but non-sequential), human speakable, case-insensitive, pseudo-random identifiers in Base36.
 
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
 * Base36 [16]: `040VZ3C6SL3BZ2RW` or `040V-Z3C6-SL3B-Z2RW` 
 
-*How*
-[...todo...]
-
-*Why? Because...*
+#### Why? Because...
 * SQL IDENTITY columns couple Id assignment with a database connection, creating a single point of failure, and restricting the ability to create object graphs in a disconnected operation.
 * Guids / SQL UNIQUEIDENTIFIERs are terrible for clustered indexing, are not practically speakable, and look ugly.
 * Sequential Guids / SQL SEQUENTIALIDs are extremely cumbersome to manage, aren't synchronized between app servers and database servers, nor in distributed environments. They also create tight coupling between application processes and the database server.
 
 
-*Requirements*
+#### Requirements Met
 * Ids must be ascending across a distributed environment
 * Ids must not collide for the lifetime of the application, even in high-demand, distributed environments
 * Ids must be assigned expecting case-insensitivity (SQL Server’s default collation)
@@ -23,7 +20,7 @@ A cross-process thread-safe C# utility to create ascending (but non-sequential),
 
 ...your wish list here...
 
-*Examples*
+#### Examples
 Ids are composed of some combination of a timestamp, a server hash[, a reserved character group], and a random component
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
 * Base36 [16]: `040VZ3C6SL3BZ2RW` or `040V-Z3C6-SL3B-Z2RW` 
@@ -43,3 +40,46 @@ Ids are composed of some combination of a timestamp, a server hash[, a reserved 
 	* 78 billion possible hash combinations for random component
 
 
+#### Testing
+```csharp
+[TestClass]
+    public class IdGenerationTests
+    {
+        private Base36IdGenerator _idGenerator;
+
+        [TestInitialize]
+        public void Setup()
+        {
+            this._idGenerator = new Base36IdGenerator(
+                numTimestampCharacters: 11,
+                numServerCharacters: 5,
+                numRandomCharacters: 4,
+                reservedValue: "",
+                delimiter: "-",
+                // give the positions in reverse order if you
+                // don't want to have to account for modifying
+                // the loop internally. To do the same in ascending
+                // order, you would need to pass 5, 11, 17 instead.
+                delimiterPositions: new[] {15, 10, 5});
+        }
+
+        [TestMethod]
+        public void TestIdsAreAscending()
+        {
+            string id1 = this._idGenerator.NewId();
+            string id2 = this._idGenerator.NewId();
+            Assert.IsTrue(String.Compare(id2, id1, StringComparison.OrdinalIgnoreCase) > 0);
+        }
+
+        [TestMethod]
+        public void TestIdLengthsAreAsExpected()
+        {
+            // These are the segment lengths passed to the constructor:
+            int expectedLength = 11 + 5 + 0 + 4;
+            string id = this._idGenerator.NewId();
+            Assert.AreEqual(id.Length, expectedLength);
+            // Should include 3 delimiter dashes when called with (true):            
+            id = this._idGenerator.NewId(true);
+            Assert.AreEqual(id.Length, expectedLength + 3);
+        }
+```
