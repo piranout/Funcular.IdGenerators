@@ -39,7 +39,7 @@ Ids are composed of some combination of a timestamp, a server hash[, a reserved 
 * Base36 [25]: `040VZ-C6SL0-1003B-Z00R2-01KR4` = 12 + 5 + 0 + 4
 	* Structure: 12 + 6 + 0 + 7 (no reserved character)
 	* Ascending over 150,000 year lifespan
-	* 2 billion possible hash combinationsfor server component
+	* 2 billion possible hash combinations for server component
 	* 78 billion possible hash combinations for random component
 
 
