@@ -131,7 +131,7 @@ namespace Funcular.IdGenerators.Base36
         public Base36IdGenerator(int numTimestampCharacters = 10, int numServerCharacters = 2, int numRandomCharacters = 3, string reservedValue = "", string delimiter = null, int[] delimiterPositions = null)
         {
             // throw if any argument would cause out-of-range exceptions
-            validateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
+            ValidateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
 
             this._numTimestampCharacters = numTimestampCharacters;
             this._numServerCharacters = numServerCharacters;
@@ -156,7 +156,7 @@ namespace Funcular.IdGenerators.Base36
             }
 
             _timeZero = _lastInitialized.Subtract(_inService);
-            initStaticMicroseconds();
+            InitStaticMicroseconds();
         }
 
         #endregion
@@ -215,7 +215,7 @@ namespace Funcular.IdGenerators.Base36
                 sb.Length += this._reservedValue.Length; // Truncates
             }
             // Add the random component:
-            sb.Append(getRandomBase36DigitsSafe());
+            sb.Append(GetRandomBase36DigitsSafe());
 
             if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
                 return sb.ToString();
@@ -232,7 +232,7 @@ namespace Funcular.IdGenerators.Base36
 
         #region Nonpublic methods
 
-        private static void validateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
+        private static void ValidateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
         {
             if (numTimestampCharacters > 12)
                 throw new ArgumentOutOfRangeException("numTimestampCharacters", "The maximum characters in any component is 12.");
@@ -322,7 +322,7 @@ namespace Funcular.IdGenerators.Base36
             }
         }
 
-        private static void initStaticMicroseconds()
+        private static void InitStaticMicroseconds()
         {
             _lastMicroseconds = GetMicroseconds();
         }
@@ -331,44 +331,34 @@ namespace Funcular.IdGenerators.Base36
         ///     Returns a random Base36 number 3 characters long.
         /// </summary>
         /// <returns></returns>
-        private string getRandomDigitsSpinLock()
+        private string GetRandomDigitsSpinLock()
         {
             long value;
-            //bool lockTaken = false;
-            //try
-            //{
-            //    _rndSpinLock.Enter(ref lockTaken);
-            //lock(_lockObj)
             while (true)
             {
                 bool lockTaken = false;
                 try
                 {
-                    //if (_spinLockTaken == false)
-                    //{
                     _locker.Enter(ref lockTaken);
                     value = _rnd.NextLong(this._maxRandom);
-                    break; //_rnd.Next(46655);
-                    //}
-                    // Do stuff...
+                    break;
                 }
                 finally
                 {
-                    if (lockTaken) // && _locker.IsHeldByCurrentThread)
+                    if (lockTaken) 
                     {
                         _locker.Exit(false);
-                        //                        _spinLockTaken = false;
                     }
                 }
             }
-            return Base36Converter.Encode(value); //_rng.Value.Next(46655);// 
+            return Base36Converter.Encode(value);
         }
 
         /// <summary>
-        ///     Gets random component of Id, pre trimmed and padded to the correct length
+        ///     Gets random component of Id, pre trimmed and padded to the correct length.
         /// </summary>
         /// <returns></returns>
-        private string getRandomBase36DigitsSafe()
+        private string GetRandomBase36DigitsSafe()
         {
             if (_randomMutex.WaitOne())
             {
@@ -388,7 +378,11 @@ namespace Funcular.IdGenerators.Base36
             throw new AbandonedMutexException();
         }
 
-        private string getRandomDigitsLock()
+        /// <summary>
+        /// This is not cross-process safe.
+        /// </summary>
+        /// <returns></returns>
+        private string GetRandomDigitsLock()
         {
             // NOTE: Using a mutex would enable cross-process locking.
             lock (_randomLock)
@@ -403,7 +397,7 @@ namespace Funcular.IdGenerators.Base36
         /// </summary>
         /// <param name="str"></param>
         /// <returns></returns>
-        private static byte[] getBytes(string str)
+        private static byte[] GetBytes(string str)
         {
             return Encoding.Default.GetBytes(str);
         }
@@ -413,7 +407,7 @@ namespace Funcular.IdGenerators.Base36
         /// </summary>
         /// <param name="bytes"></param>
         /// <returns></returns>
-        private static string getString(byte[] bytes)
+        private static string GetString(byte[] bytes)
         {
             return Encoding.Default.GetString(bytes);
         }
