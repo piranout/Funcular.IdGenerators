@@ -3,7 +3,7 @@
 // *********************************************************************************************************
 // Funcular.IdGenerators>Funcular.IdGenerators>Base36IdGenerator.cs
 // Created: 2015-06-26 2:57 PM
-// Updated: 2015-06-29 4:00 PM
+// Updated: 2015-06-30 10:18 AM
 // By: Paul Smith 
 // 
 // *********************************************************************************************************
@@ -125,10 +125,19 @@ namespace Funcular.IdGenerators.Base36
             _sw = Stopwatch.StartNew();
         }
 
+        ///     The default Id format is 11 characters for the timestamp (4170 year lifespan),
+        ///     4 for the server hash (1.6m hashes), 5 for the random value (60m combinations),
+        ///     and no reserved character. The default delimited format will be four dash-separated
+        ///     groups of 5.
+        public Base36IdGenerator() : this(11, 4, 5, "", "-")
+        {
+            this._delimiterPositions = new[] { 15, 10, 5 };
+        }
+
         /// <summary>
-        ///     Instance constructor
+        ///     The layout is Timestamp + Server Hash [+ Reserved] + Random.
         /// </summary>
-        public Base36IdGenerator(int numTimestampCharacters = 10, int numServerCharacters = 2, int numRandomCharacters = 3, string reservedValue = "", string delimiter = null, int[] delimiterPositions = null)
+        public Base36IdGenerator(int numTimestampCharacters = 11, int numServerCharacters = 4, int numRandomCharacters = 5, string reservedValue = "", string delimiter = "-", int[] delimiterPositions = null)
         {
             // throw if any argument would cause out-of-range exceptions
             ValidateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
@@ -219,34 +228,11 @@ namespace Funcular.IdGenerators.Base36
 
             if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
                 return sb.ToString();
-            foreach (int pos in this._delimiterPositions)
+            foreach (var pos in this._delimiterPositions)
             {
                 sb.Insert(pos, this._delimiter);
             }
             return sb.ToString();
-        }
-
-        #endregion
-
-
-
-        #region Nonpublic methods
-
-        private static void ValidateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
-        {
-            if (numTimestampCharacters > 12)
-                throw new ArgumentOutOfRangeException("numTimestampCharacters", "The maximum characters in any component is 12.");
-            if (numServerCharacters > 12)
-                throw new ArgumentOutOfRangeException("numServerCharacters", "The maximum characters in any component is 12.");
-            if (numRandomCharacters > 12)
-                throw new ArgumentOutOfRangeException("numRandomCharacters", "The maximum characters in any component is 12.");
-
-            if (numTimestampCharacters < 0)
-                throw new ArgumentOutOfRangeException("numTimestampCharacters", "Number must not be negative.");
-            if (numServerCharacters < 0)
-                throw new ArgumentOutOfRangeException("numServerCharacters", "Number must not be negative.");
-            if (numRandomCharacters < 0)
-                throw new ArgumentOutOfRangeException("numRandomCharacters", "Number must not be negative.");
         }
 
         /// <summary>
@@ -273,6 +259,48 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
+        ///     Gets a random Base36 string of the specified <paramref name="length"/>.
+        /// </summary>
+        /// <returns></returns>
+        public string GetRandomString(int length)
+        {
+            if (length < 1 || length > 12)
+                throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
+            lock (_randomLock)
+            {
+                var maxRandom = (long) Math.Pow(36, length);
+                long random = _rnd.NextLong(maxRandom);
+                string encoded = Base36Converter.FromInt64(random);
+                return encoded.Length > length ?
+                    encoded.Truncate(length) :
+                    encoded.PadLeft(length, '0');
+            }
+        }
+
+        #endregion
+
+
+
+        #region Nonpublic methods
+
+        private static void ValidateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
+        {
+            if (numTimestampCharacters > 12)
+                throw new ArgumentOutOfRangeException("numTimestampCharacters", "The maximum characters in any component is 12.");
+            if (numServerCharacters > 12)
+                throw new ArgumentOutOfRangeException("numServerCharacters", "The maximum characters in any component is 12.");
+            if (numRandomCharacters > 12)
+                throw new ArgumentOutOfRangeException("numRandomCharacters", "The maximum characters in any component is 12.");
+
+            if (numTimestampCharacters < 0)
+                throw new ArgumentOutOfRangeException("numTimestampCharacters", "Number must not be negative.");
+            if (numServerCharacters < 0)
+                throw new ArgumentOutOfRangeException("numServerCharacters", "Number must not be negative.");
+            if (numRandomCharacters < 0)
+                throw new ArgumentOutOfRangeException("numRandomCharacters", "Number must not be negative.");
+        }
+
+        /// <summary>
         ///     Returns value with all non base 36 characters removed. Uses mutex.
         /// </summary>
         /// <returns></returns>
@@ -281,7 +309,7 @@ namespace Funcular.IdGenerators.Base36
         ///     return the same value twice, even across multiple processes.
         /// </summary>
         /// <returns></returns>
-        public static long GetMicrosecondsSafe()
+        internal static long GetMicrosecondsSafe()
         {
             try
             {
@@ -307,7 +335,7 @@ namespace Funcular.IdGenerators.Base36
         ///     to measure durations.
         /// </summary>
         /// <returns></returns>
-        public static long GetMicroseconds()
+        internal static long GetMicroseconds()
         {
             lock (_timestampLock)
             {
@@ -345,10 +373,8 @@ namespace Funcular.IdGenerators.Base36
                 }
                 finally
                 {
-                    if (lockTaken) 
-                    {
+                    if (lockTaken)
                         _locker.Exit(false);
-                    }
                 }
             }
             return Base36Converter.Encode(value);
@@ -379,7 +405,7 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
-        /// This is not cross-process safe.
+        ///     This is not cross-process safe.
         /// </summary>
         /// <returns></returns>
         private string GetRandomDigitsLock()
