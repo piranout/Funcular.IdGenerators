@@ -1,9 +1,26 @@
 # Funcular.IdGenerators
 
-A cross-process thread-safe C# utility to create ascending (but non-sequential), human speakable, case-insensitive, pseudo-random identifiers in Base36. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*.
+A cross-process thread-safe C# utility to create non-sequentially ascending, human speakable, case-insensitive, pseudo-random identifiers in Base36. Identifiers are composed of (in this order), a timestamp component, a server hash component, an optional number of reserved  characters, and a random component. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*. 
 
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
 * Base36 [16]: `040VZ3C6SL3BZ2RW` or `040V-Z3C6-SL3B-Z2RW` 
+ 
+#### Usage
+Create a generator instance by passing the lengths of the various components, plus any desired delimiter character and layout (optional), to the constructor. To generate Ids, simply call `NewId()` for a plain identifier or `NewId(true)` for a delimited one. The class is thread-safe, so your DI container can share a single instance across the entire app domain. See the Wiki for a complete multithreaded stress and performance test.
+
+```csharp
+var generator = new Base36IdGenerator(
+                numTimestampCharacters: 12, 
+                numServerCharacters: 6, 
+                numRandomCharacters: 7, 
+                reservedValue: "", 
+                delimiter: "-", 
+                delimiterPositions: new[] {20, 15, 10, 5})
+Console.WriteLine(generator.NewId()); 
+// "00E4WG2E7NMXEMFY919O2PIHS"
+Console.WriteLine(generator.NewId(delimited: true));
+// "00E4W-G2GTO-0IEMF-Y911Q-KJI8E"
+```
 
 #### Why? Because...
 * SQL IDENTITY columns couple Id assignment with a database connection, creating a single point of failure, and restricting the ability to create object graphs in a disconnected operation.
