@@ -52,10 +52,13 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="NuGet\Funcular.IdGenerators.0.0.7.1.nupkg" />
+    <None Include="NuGet\Funcular.IdGenerators.0.0.7.2.nupkg" />
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
-    <Folder Include="NuGet\" />
+    <Content Include="Funcular.IdGenerators.UnitTests\Funcular.IdGenerators.UnitTests.csproj" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
