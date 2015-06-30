@@ -54,6 +54,7 @@
   <ItemGroup>
     <None Include="NuGet\Funcular.IdGenerators.0.0.7.1.nupkg" />
     <None Include="NuGet\Funcular.IdGenerators.0.0.7.2.nupkg" />
+    <None Include="NuGet\Funcular.IdGenerators.0.0.7.3.nupkg" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
