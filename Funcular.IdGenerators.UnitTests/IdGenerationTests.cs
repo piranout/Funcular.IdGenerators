@@ -42,6 +42,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.Base36;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -74,7 +75,13 @@ namespace Funcular.IdGenerators.UnitTests
         }
 
         [TestMethod]
-        public void TestIdsAreAscending()
+        public void Initialize()
+        {
+            _idGenerator.NewId();
+        }
+
+        [TestMethod]
+        public void Ids_Are_Ascending()
         {
             string id1 = this._idGenerator.NewId();
             string id2 = this._idGenerator.NewId();
@@ -82,7 +89,7 @@ namespace Funcular.IdGenerators.UnitTests
         }
 
         [TestMethod]
-        public void TestIdLengthsAreAsExpected()
+        public void Id_Length_Is_Correct()
         {
             // These are the segment lengths passed to the constructor:
             int expectedLength = 11 + 5 + 0 + 4;
@@ -97,8 +104,8 @@ namespace Funcular.IdGenerators.UnitTests
         //  Id generation is thread safe and maintains uniqueness across threads.
         //  This method requires running from one to several seconds, so it needen't
         //  be part of every build.
-        //[TestMethod]
-        public void TestCollisionAvoidance()
+        [TestMethod]
+        public void Ids_Do_Not_Collide()
         {
             var ids = new ConcurrentDictionary<string, string>();
             var cancellationTokenSource = new CancellationTokenSource();
@@ -119,10 +126,38 @@ namespace Funcular.IdGenerators.UnitTests
                 tasks[i].Start();
             }
             // Lengthen the timespan for more thorough testing.
-            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(1));
+            cancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(2));
             while (cancellationTokenSource.IsCancellationRequested == false)
                 Thread.Yield();
             Debug.WriteLine(ids.Count);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(ArgumentOutOfRangeException))]
+        public void Timestamps_Throw_Out_Of_Range()
+        {
+            _idGenerator.GetTimestamp(13);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(OverflowException))]
+        public void Timestamps_Throws_Overflow_When_Strict()
+        {
+            _idGenerator.GetTimestamp(length: 5, resolution: TimestampResolution.Ticks, strict: true);
+        }
+
+        [TestMethod]
+        public void Timestamp_Only_Throws_Overflow_When_Strict()
+        {
+            Assert.IsTrue
+                (_idGenerator.GetTimestamp(length: 10, resolution: TimestampResolution.Day, strict: false).HasValue());
+        }
+
+        [TestMethod]
+        public void Timestamp_Is_Expected_Length()
+        {
+            Assert.IsTrue
+                (_idGenerator.GetTimestamp(length: 10, resolution: TimestampResolution.Day, strict: false).Length == 10);
         }
     }
 }

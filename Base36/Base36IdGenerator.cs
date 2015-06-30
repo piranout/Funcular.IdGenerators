@@ -129,7 +129,8 @@ namespace Funcular.IdGenerators.Base36
         ///     4 for the server hash (1.6m hashes), 5 for the random value (60m combinations),
         ///     and no reserved character. The default delimited format will be four dash-separated
         ///     groups of 5.
-        public Base36IdGenerator() : this(11, 4, 5, "", "-")
+        public Base36IdGenerator()
+            : this(11, 4, 5, "", "-")
         {
             this._delimiterPositions = new[] { 15, 10, 5 };
         }
@@ -149,7 +150,7 @@ namespace Funcular.IdGenerators.Base36
             this._delimiter = delimiter;
             this._delimiterPositions = delimiterPositions;
 
-            this._maxRandom = (long) Math.Pow(36d, numRandomCharacters);
+            this._maxRandom = (long)Math.Pow(36d, numRandomCharacters);
             _hostHash = ComputeHostHash();
 
             Debug.WriteLine("Instance constructor fired");
@@ -175,25 +176,21 @@ namespace Funcular.IdGenerators.Base36
         #region Public methods
 
         /// <summary>
-        ///     Generates a new Base36 identifier
+        ///     Generates a unique, sequential, Base36 string. If this instance was instantiated using 
+        ///     the default constructor, it will be 20 characters long.
+        ///     The first 11 characters are the microseconds elapsed since the InService DateTime
+        ///     (Epoch by default).
+        ///     The next 4 characters are the SHA1 of the hostname in Base36.
+        ///     The last 5 characters are random Base36 number between 0 and 36 ^ 5.
         /// </summary>
-        /// <returns></returns>
-        /// <summary>
-        ///     Generates a unique, sequential, Base36 string, 16 characters long.
-        ///     The first 10 characters are the microseconds elapsed since the InService DateTime
-        ///     (constant field you hardcode in this file).
-        ///     The next 2 characters are a compressed checksum of the MD5 of this host.
-        ///     The next 1 character is a reserved constant of 36 ('Z' in Base36).
-        ///     The last 3 characters are random number less than 46655 additional for additional uniqueness.
-        /// </summary>
-        /// <returns>Returns a unique, sequential, 16-character Base36 string</returns>
+        /// <returns>Returns a unique, sequential, 20-character Base36 string</returns>
         public string NewId()
         {
             return NewId(false);
         }
 
         /// <summary>
-        ///     Generates a unique, sequential, Base36 string, 16 characters long.
+        ///     Generates a unique, sequential, Base36 string; you control the len
         ///     The first 10 characters are the microseconds elapsed since the InService DateTime
         ///     (constant field you hardcode in this file).
         ///     The next 2 characters are a compressed checksum of the MD5 of this host.
@@ -268,7 +265,7 @@ namespace Funcular.IdGenerators.Base36
                 throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
             lock (_randomLock)
             {
-                var maxRandom = (long) Math.Pow(36, length);
+                var maxRandom = (long)Math.Pow(36, length);
                 long random = _rnd.NextLong(maxRandom);
                 string encoded = Base36Converter.FromInt64(random);
                 return encoded.Length > length ?
@@ -276,6 +273,71 @@ namespace Funcular.IdGenerators.Base36
                     encoded.PadLeft(length, '0');
             }
         }
+
+        /// <summary>
+        /// Get a Base36 encoded timestamp string, based on Epoch. Use for disposable
+        /// strings where global/universal uniqueness is not critical. If using the 
+        /// default resolution of Microseconds, 5 character values are exhausted in 1 minute.
+        /// 6 characters = ½ hour. 7 characters = 21 hours. 8 characters = 1 month.
+        /// 9 characters = 3 years. 10 characters = 115 years. 11 characters = 4170 years.
+        /// 12 characteres = 150 thousand years.
+        /// </summary>
+        /// <param name="length"></param>
+        /// <param name="resolution"></param>
+        /// <param name="sinceUtc">Defaults to Epoch</param>
+        /// <param name="strict">If false (default), overflow values will use the 
+        /// value modulus 36. Otherwise it will throw an overflow exception.</param>
+        /// <returns></returns>
+        public string GetTimestamp(int length, TimestampResolution resolution = TimestampResolution.Microsecond, DateTime? sinceUtc = null, bool strict = false)
+        {
+            if (length < 1 || length > 12)
+                throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
+            var origin = sinceUtc ?? _inService;
+            var elapsed = DateTime.UtcNow.Subtract(origin);
+            long intervals;
+            switch (resolution)
+            {
+                case TimestampResolution.Day:
+                    intervals = elapsed.Days;
+                    break;
+                case TimestampResolution.Hour:
+                    intervals = Convert.ToInt64(elapsed.TotalHours);
+                    break;
+                case TimestampResolution.Minute:
+                    intervals = Convert.ToInt64(elapsed.TotalMinutes);
+                    break;
+                case TimestampResolution.Second:
+                    intervals = Convert.ToInt64(elapsed.TotalSeconds);
+                    break;
+                case TimestampResolution.Millisecond:
+                    intervals = Convert.ToInt64(elapsed.TotalMilliseconds);
+                    break;
+                case TimestampResolution.Microsecond:
+                    intervals = elapsed.TotalMicroseconds();
+                    break;
+                case TimestampResolution.Ticks:
+                    intervals = elapsed.Ticks;
+                    break;
+                case TimestampResolution.None:
+                default:
+                    throw new ArgumentOutOfRangeException("resolution");
+            }
+            var combinations = Math.Pow(36, length);
+            if (combinations < intervals)
+            {
+                if (strict)
+                {
+                    throw new OverflowException(string.Format("At resolution {0}, value is greater than {1}-character timestamps can express.", resolution.ToString(), length));
+                }
+                intervals = intervals % 36;
+            }
+            string encoded = Base36Converter.FromInt64(intervals);
+            return encoded.Length > length ?
+                encoded.Truncate(length) :
+                encoded.PadLeft(length, '0');
+        }
+
+
 
         #endregion
 
@@ -439,5 +501,17 @@ namespace Funcular.IdGenerators.Base36
         }
 
         #endregion
+    }
+
+    public enum TimestampResolution
+    {
+        None = 0,
+        Day = 4,
+        Hour = 8,
+        Minute = 16,
+        Second = 32,
+        Millisecond = 64,
+        Microsecond = 128,
+        Ticks = 256
     }
 }

@@ -54,6 +54,10 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\Funcular.ExtensionMethods\Funcular.ExtensionMethods.csproj">
+      <Project>{C461282F-2D18-4374-90BB-3E046BC418C6}</Project>
+      <Name>Funcular.ExtensionMethods</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Funcular.IdGenerators.csproj">
       <Project>{B35565E7-D35B-4C95-B18B-A869506D8354}</Project>
       <Name>Funcular.IdGenerators</Name>
