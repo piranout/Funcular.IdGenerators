@@ -233,6 +233,25 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
+        /// Given a non-delimited Id, format it with the current instance’s
+        /// delimiter and delimiter positions. If Id already contains delimiter,
+        /// or is null or empy, returns Id unmodified.
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public string Format(string id)
+        {
+            if (!id.HasWordValue() || id.Contains(_delimiter, StringComparison.OrdinalIgnoreCase))
+                return id;
+            StringBuilder sb = new StringBuilder(id);
+            foreach (var pos in this._delimiterPositions)
+            {
+                sb.Insert(pos, _delimiter);
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>
         ///     Base36 representation of the SHA1 of the hostname. The constructor argument
         ///     numServerCharacters controls the maximum length of this hash.
         /// </summary>

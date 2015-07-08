@@ -56,22 +56,26 @@ namespace Funcular.IdGenerators.UnitTests
     public class IdGenerationTests
     {
         private Base36IdGenerator _idGenerator;
+        private string _delimiter;
+        private int[] _delimiterPositions;
 
         [TestInitialize]
         public void Setup()
         {
+            this._delimiter = "-";
+            this._delimiterPositions = new[] {15, 10, 5};
             this._idGenerator = new Base36IdGenerator(
                 numTimestampCharacters: 11,
                 numServerCharacters: 5,
                 numRandomCharacters: 4,
                 reservedValue: "",
-                delimiter: "-",
+                delimiter: this._delimiter,
                 // give the positions in reverse order if you
                 // don't want to have to account for modifying
                 // the loop internally. To do the same in ascending
                 // order, you would need to pass 5, 11, 17:
-                // delimiterPositions: new[] {15, 10, 5});
-                delimiterPositions: new[] {5, 11, 17});
+                delimiterPositions: this._delimiterPositions);
+                // delimiterPositions: new[] {5, 11, 17});
         }
 
         [TestMethod]
@@ -130,6 +134,15 @@ namespace Funcular.IdGenerators.UnitTests
             while (cancellationTokenSource.IsCancellationRequested == false)
                 Thread.Yield();
             Debug.WriteLine(ids.Count);
+        }
+
+        [TestMethod]
+        public void Formatted_Id_Has_Correct_Length()
+        {
+            var id = _idGenerator.NewId();
+            var length = id.Length;
+            var formatted = _idGenerator.Format(id);
+            Assert.IsTrue(formatted.Contains(_delimiter) && formatted.Length == length + (_delimiter.Length * _delimiterPositions.Length));
         }
 
         [TestMethod]
