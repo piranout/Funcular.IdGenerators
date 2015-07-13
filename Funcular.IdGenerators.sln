@@ -5,9 +5,14 @@ VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Funcular.IdGenerators", "Funcular.IdGenerators.csproj", "{B35565E7-D35B-4C95-B18B-A869506D8354}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Funcular.ExtensionMethods", "..\Funcular.ExtensionMethods\Funcular.ExtensionMethods.csproj", "{C461282F-2D18-4374-90BB-3E046BC418C6}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Funcular.IdGenerators.UnitTests", "Funcular.IdGenerators.UnitTests\Funcular.IdGenerators.UnitTests.csproj", "{2F568598-A57D-4505-87C1-B9794B0FBCE5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{002F9329-F351-454E-B196-BE3878C09058}"
+	ProjectSection(SolutionItems) = preProject
+		.nuget\NuGet.Config = .nuget\NuGet.Config
+		.nuget\NuGet.exe = .nuget\NuGet.exe
+		.nuget\NuGet.targets = .nuget\NuGet.targets
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,10 +24,6 @@ Global
 		{B35565E7-D35B-4C95-B18B-A869506D8354}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B35565E7-D35B-4C95-B18B-A869506D8354}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B35565E7-D35B-4C95-B18B-A869506D8354}.Release|Any CPU.Build.0 = Release|Any CPU
-		{C461282F-2D18-4374-90BB-3E046BC418C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C461282F-2D18-4374-90BB-3E046BC418C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C461282F-2D18-4374-90BB-3E046BC418C6}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C461282F-2D18-4374-90BB-3E046BC418C6}.Release|Any CPU.Build.0 = Release|Any CPU
 		{2F568598-A57D-4505-87C1-B9794B0FBCE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{2F568598-A57D-4505-87C1-B9794B0FBCE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2F568598-A57D-4505-87C1-B9794B0FBCE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
