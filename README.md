@@ -1,9 +1,10 @@
 # Funcular.IdGenerators
 
-A cross-process thread-safe C# utility to create non-sequentially ascending, human speakable, case-insensitive, pseudo-random identifiers in Base36. Identifiers are composed of (in this order), a timestamp component, a server hash component, an optional number of reserved  characters, and a random component. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*. 
+A cross-process thread-safe C# utility to create ordered (but non-sequential), human speakable, case-insensitive, partially random (non-guessable) identifiers in Base36. Identifiers are composed of (in this order), a timestamp component, a server hash component, an optional number of reserved  characters, and a random component. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*. 
 
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
-* Base36 [16]: `040VZ3C6SL3BZ2RW` or `040V-Z3C6-SL3B-Z2RW` 
+* Base36 [20]: `040VKZ3C60SL3B1Z2RW5` or `040VK-Z3C60-SL3B1-Z2RW5`
+* Dashes are cosmetic formatting, not part of the Id; store as a CHAR(20).
  
 #### Usage
 Create a generator instance by passing the lengths of the various components, plus any desired delimiter character and layout (optional), to the constructor. To generate Ids, simply call `NewId()` for a plain identifier or `NewId(true)` for a delimited one. The class is thread-safe, so your DI container can share a single instance across the entire app domain. See the Wiki for a complete multithreaded stress and performance test.
