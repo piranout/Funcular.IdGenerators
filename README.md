@@ -1,6 +1,6 @@
 # Funcular.IdGenerators
 
-A cross-process thread-safe C# utility to create ordered (but non-sequential), human speakable, case-insensitive, partially random (non-guessable) identifiers in Base36. Identifiers are composed of (in this order), a timestamp component, a server hash component, an optional number of reserved  characters, and a random component. Note: This project depends on sibling repo *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*. 
+A cross-process thread-safe C# utility to create ordered (but non-sequential), human speakable, case-insensitive, partially random (non-guessable) identifiers in Base36. Identifiers are composed of (in this order), a timestamp component, a server hash component, an optional number of reserved  characters, and a random component. Note: Source for the ExtensionMethods NuGet package dependency is available at *[Funcular.ExtensionMethods](https://github.com/piranout/Funcular.ExtensionMethods/ "Funcular Extension Methods")*. 
 
 * Guid: `{7331d71b-d1f1-443b-97f6-f24eeb207828}`
 * Base36 [20]: `040VKZ3C60SL3B1Z2RW5` or `040VK-Z3C60-SL3B1-Z2RW5`
