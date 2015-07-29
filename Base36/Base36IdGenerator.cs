@@ -208,7 +208,7 @@ namespace Funcular.IdGenerators.Base36
             // Microseconds since InService (using Stopwatch) provides the 
             // first n chars (n = _numTimestampCharacters):
             long microseconds = GetMicrosecondsSafe();
-            string base36Microseconds = Base36Converter.FromInt64(microseconds);
+            string base36Microseconds = Base36Converter.FromLong(microseconds);
             if (base36Microseconds.Length > this._numTimestampCharacters)
                 base36Microseconds = base36Microseconds.Truncate(this._numTimestampCharacters);
             sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
@@ -286,7 +286,7 @@ namespace Funcular.IdGenerators.Base36
             {
                 var maxRandom = (long)Math.Pow(36, length);
                 long random = _rnd.NextLong(maxRandom);
-                string encoded = Base36Converter.FromInt64(random);
+                string encoded = Base36Converter.FromLong(random);
                 return encoded.Length > length ?
                     encoded.Truncate(length) :
                     encoded.PadLeft(length, '0');
@@ -350,7 +350,7 @@ namespace Funcular.IdGenerators.Base36
                 }
                 intervals = intervals % 36;
             }
-            string encoded = Base36Converter.FromInt64(intervals);
+            string encoded = Base36Converter.FromLong(intervals);
             return encoded.Length > length ?
                 encoded.Truncate(length) :
                 encoded.PadLeft(length, '0');
@@ -470,7 +470,7 @@ namespace Funcular.IdGenerators.Base36
             if (_randomMutex.WaitOne())
             {
                 long random = _rnd.NextLong(this._maxRandom);
-                string encoded = Base36Converter.FromInt64(random);
+                string encoded = Base36Converter.FromLong(random);
                 try
                 {
                     return encoded.Length > this._numRandomCharacters ?

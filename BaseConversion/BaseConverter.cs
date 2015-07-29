@@ -106,5 +106,43 @@ namespace Funcular.IdGenerators.BaseConversion
             while (newlen != 0);
             return result;
         }
+
+        /// <summary>
+        /// Converts the given decimal number to the numeral system with the
+        /// specified radix (in the range [2, 36]).
+        /// </summary>
+        /// <param name="decimalNumber">The number to convert.</param>
+        /// <param name="radix">The radix of the destination numeral system (in the range [2, 36]).</param>
+        /// <returns></returns>
+        public static string DecimalToArbitrarySystem(long decimalNumber, int radix)
+        {
+            const int BITS_IN_LONG = 64;
+            const string DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+            if (radix < 2 || radix > DIGITS.Length)
+                throw new ArgumentException("The radix must be >= 2 and <= " + DIGITS.Length.ToString());
+
+            if (decimalNumber == 0)
+                return "0";
+
+            int index = BITS_IN_LONG - 1;
+            long currentNumber = Math.Abs(decimalNumber);
+            char[] charArray = new char[BITS_IN_LONG];
+
+            while (currentNumber != 0)
+            {
+                int remainder = (int)(currentNumber % radix);
+                charArray[index--] = DIGITS[remainder];
+                currentNumber = currentNumber / radix;
+            }
+
+            string result = new String(charArray, index + 1, BITS_IN_LONG - index - 1);
+            if (decimalNumber < 0)
+            {
+                result = "-" + result;
+            }
+
+            return result;
+        }
     }
 }
