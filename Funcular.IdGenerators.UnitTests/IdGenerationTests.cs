@@ -44,6 +44,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.Base36;
+using Funcular.IdGenerators.Enums;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 #endregion

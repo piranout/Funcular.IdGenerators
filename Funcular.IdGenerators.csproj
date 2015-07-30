@@ -53,6 +53,8 @@
     <Compile Include="Base36\Base36IdGenerator.cs" />
     <Compile Include="BaseConversion\Base36Converter.cs" />
     <Compile Include="BaseConversion\BaseConverter.cs" />
+    <Compile Include="ConcurrentRandom.cs" />
+    <Compile Include="Enums\TimestampResolution.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

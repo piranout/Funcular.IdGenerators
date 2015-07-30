@@ -46,9 +46,8 @@ using System.Text;
 using System.Threading;
 using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.BaseConversion;
-
+using Funcular.IdGenerators.Enums;
 #endregion
-
 
 
 namespace Funcular.IdGenerators.Base36
@@ -56,12 +55,14 @@ namespace Funcular.IdGenerators.Base36
     public class Base36IdGenerator
     {
         #region Private fields
+        #region Static
 
         private static readonly object _timestampLock = new object();
         private static readonly object _randomLock = new object();
         private static readonly Mutex _timestampMutex;
         private static readonly Mutex _randomMutex;
         private static string _hostHash;
+        
         // reserved byte, start at the max Base36 value, can decrement 
         // up to 35 times when values are exhausted (every ~115 years),
         // or repurpose as a discriminator if desired:
@@ -71,7 +72,7 @@ namespace Funcular.IdGenerators.Base36
         ///     This is UTC Epoch. In shorter Id implementations it was configurable, to allow
         ///     one to milk more longevity out of a shorter series of timestamps.
         /// </summary>
-        private static DateTime _inService = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        private static DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         /// <summary>
         ///     The timespan representing from Epoch until instantiated.
@@ -85,6 +86,13 @@ namespace Funcular.IdGenerators.Base36
         private static readonly Stopwatch _sw;
 
         private static SpinLock _locker = new SpinLock(true);
+
+        #endregion
+
+
+
+        #region Instance
+
         private readonly string _delimiter;
         private readonly int[] _delimiterPositions;
         private readonly long _maxRandom;
@@ -94,6 +102,7 @@ namespace Funcular.IdGenerators.Base36
         private readonly string _reservedValue;
 
         #endregion
+        #endregion
 
 
 
@@ -101,7 +110,7 @@ namespace Funcular.IdGenerators.Base36
 
         public string HostHash { get { return _hostHash; } }
 
-        public DateTime InServiceDate { get { return _inService; } }
+        public DateTime EpochDate { get { return _epoch; } }
 
         #endregion
 
@@ -121,7 +130,7 @@ namespace Funcular.IdGenerators.Base36
             _randomMutex = new Mutex(false, @"Global\Base36IdGeneratorRandom");
             _rnd = new Random();
             _randomLock = new object();
-            _timeZero = _lastInitialized.Subtract(_inService);
+            _timeZero = _lastInitialized.Subtract(_epoch);
             _sw = Stopwatch.StartNew();
         }
 
@@ -162,10 +171,10 @@ namespace Funcular.IdGenerators.Base36
             {
                 DateTime inService;
                 if (DateTime.TryParse(appSettingValue, out inService))
-                    _inService = inService;
+                    _epoch = inService;
             }
 
-            _timeZero = _lastInitialized.Subtract(_inService);
+            _timeZero = _lastInitialized.Subtract(_epoch);
             InitStaticMicroseconds();
         }
 
@@ -285,7 +294,7 @@ namespace Funcular.IdGenerators.Base36
             lock (_randomLock)
             {
                 var maxRandom = (long)Math.Pow(36, length);
-                long random = _rnd.NextLong(maxRandom);
+                long random = ConcurrentRandom.Random.NextLong(maxRandom);
                 string encoded = Base36Converter.FromLong(random);
                 return encoded.Length > length ?
                     encoded.Truncate(length) :
@@ -311,7 +320,7 @@ namespace Funcular.IdGenerators.Base36
         {
             if (length < 1 || length > 12)
                 throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
-            var origin = sinceUtc ?? _inService;
+            var origin = sinceUtc ?? _epoch;
             var elapsed = DateTime.UtcNow.Subtract(origin);
             long intervals;
             switch (resolution)
@@ -392,6 +401,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns></returns>
         internal static long GetMicrosecondsSafe()
         {
+            return ConcurrentStopwatch.GetMicroseconds();
             try
             {
                 _timestampMutex.WaitOne();
@@ -418,6 +428,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns></returns>
         internal static long GetMicroseconds()
         {
+            return ConcurrentStopwatch.GetMicroseconds();
             lock (_timestampLock)
             {
                 long microseconds;
@@ -437,37 +448,18 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
-        ///     Returns a random Base36 number 3 characters long.
-        /// </summary>
-        /// <returns></returns>
-        private string GetRandomDigitsSpinLock()
-        {
-            long value;
-            while (true)
-            {
-                bool lockTaken = false;
-                try
-                {
-                    _locker.Enter(ref lockTaken);
-                    value = _rnd.NextLong(this._maxRandom);
-                    break;
-                }
-                finally
-                {
-                    if (lockTaken)
-                        _locker.Exit(false);
-                }
-            }
-            return Base36Converter.Encode(value);
-        }
-
-        /// <summary>
         ///     Gets random component of Id, pre trimmed and padded to the correct length.
         /// </summary>
         /// <returns></returns>
         private string GetRandomBase36DigitsSafe()
         {
-            if (_randomMutex.WaitOne())
+            long number = ConcurrentRandom.Random.NextLong(this._maxRandom);
+            string encoded = Base36Converter.FromLong(number);
+            return encoded.Length > this._numRandomCharacters ?
+                encoded.Truncate(this._numRandomCharacters) :
+                encoded.PadLeft(this._numRandomCharacters, '0');
+
+/*            if (_randomMutex.WaitOne())
             {
                 long random = _rnd.NextLong(this._maxRandom);
                 string encoded = Base36Converter.FromLong(random);
@@ -482,55 +474,69 @@ namespace Funcular.IdGenerators.Base36
                     _randomMutex.ReleaseMutex();
                 }
             }
-            throw new AbandonedMutexException();
-        }
-
-        /// <summary>
-        ///     This is not cross-process safe.
-        /// </summary>
-        /// <returns></returns>
-        private string GetRandomDigitsLock()
-        {
-            // NOTE: Using a mutex would enable cross-process locking.
-            lock (_randomLock)
-            {
-                long next = _rnd.NextLong(this._maxRandom);
-                return Base36Converter.Encode(next);
-            }
-        }
-
-        /// <summary>
-        ///     Shorthand for Encoding.Default.GetBytes
-        /// </summary>
-        /// <param name="str"></param>
-        /// <returns></returns>
-        private static byte[] GetBytes(string str)
-        {
-            return Encoding.Default.GetBytes(str);
-        }
-
-        /// <summary>
-        ///     Shorthand for Encoding.Default.GetString
-        /// </summary>
-        /// <param name="bytes"></param>
-        /// <returns></returns>
-        private static string GetString(byte[] bytes)
-        {
-            return Encoding.Default.GetString(bytes);
+            throw new AbandonedMutexException();*/
         }
 
         #endregion
     }
 
-    public enum TimestampResolution
+    public static class ConcurrentStopwatch
     {
-        None = 0,
-        Day = 4,
-        Hour = 8,
-        Minute = 16,
-        Second = 32,
-        Millisecond = 64,
-        Microsecond = 128,
-        Ticks = 256
+        private static readonly DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        [ThreadStatic] private static Stopwatch _sw;
+                               
+        [ThreadStatic] private static DateTime _lastInitialized;
+                               
+        [ThreadStatic] private static TimeSpan _timeZero;
+
+        public static long GetMicroseconds()
+        {
+            return TimeZero.Add(Instance.Elapsed).TotalMicroseconds();
+        }
+
+        public static TimeSpan Elapsed
+        {
+            get { return Instance.Elapsed; }
+        }
+
+        public static Stopwatch Instance
+        {
+            get
+            {
+                if (_sw == null)
+                {
+                    Init();
+                }
+                return _sw;
+            }
+        }
+
+        private static void Init()
+        {
+            _sw = Stopwatch.StartNew();
+            _lastInitialized = DateTime.Now;
+            _timeZero = _lastInitialized.Subtract(_epoch);
+        }
+
+        public static DateTime LastInitialized
+        {
+            get
+            {
+                if (_lastInitialized == default(DateTime))
+                    Init();
+                return _lastInitialized;
+            }
+        }
+
+        public static TimeSpan TimeZero
+        {
+            get
+            {
+                if (_timeZero == default(TimeSpan))
+                    Init();
+                return _timeZero;
+            }
+        }
     }
 }

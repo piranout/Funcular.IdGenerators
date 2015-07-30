@@ -29,7 +29,7 @@ namespace Funcular.IdGenerators.PerformanceTests
             var count = testSingleThreaded;
             sw.Stop();
             Console.WriteLine();
-            Console.WriteLine("Synchronously:\tCreated {0} Ids in {1}; rate {2:n0}/s", count, sw.Elapsed,
+            Console.WriteLine("Synchronously:\tCreated {0:n0} Ids in {1}; rate {2:n0}/s", count, sw.Elapsed,
                 count/sw.Elapsed.Seconds);
         }
 
@@ -40,7 +40,7 @@ namespace Funcular.IdGenerators.PerformanceTests
             var count = _tests.TestMultithreaded(seconds, processors);
             sw.Stop();
             Console.WriteLine();
-            Console.WriteLine("Asynchronously:\tCreated {0} Ids in {1}; rate {2}/s", count, sw.Elapsed,
+            Console.WriteLine("Asynchronously:\tCreated {0:n0} Ids in {1}; rate {2:n0}/s", count, sw.Elapsed,
                 count/sw.Elapsed.Seconds);
         }
 
