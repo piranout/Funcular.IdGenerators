@@ -9,6 +9,7 @@ namespace Funcular.IdGenerators.PerformanceTests
         private static Base36IdGenerator _generator;
         private static PerformanceTests _tests;
 
+        // ReSharper disable once UnusedParameter.Local
         private static void Main(string[] args)
         {
 

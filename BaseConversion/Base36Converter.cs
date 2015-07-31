@@ -38,10 +38,11 @@
 #region Usings
 
 using System;
+using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-
+using System.Runtime.CompilerServices;
 #endregion
 
 
@@ -51,6 +52,7 @@ namespace Funcular.IdGenerators.BaseConversion
     public static class Base36Converter
     {
         private static string _charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        private static readonly char[] _digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
         /// <summary>
         ///     The character set for encoding. Defaults to upper-case alphanumerics 0-9, A-Z.
@@ -87,33 +89,26 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="decimalNumber">The number to convert.</param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FromLong(long decimalNumber)
         {
             const int BITS_IN_LONG = 64;
+            int index = BITS_IN_LONG - 1;
             const int RADIX = 36;
-            const string DIGITS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
             if (decimalNumber == 0)
                 return "0";
 
-            int index = BITS_IN_LONG - 1;
             long currentNumber = Math.Abs(decimalNumber);
             char[] charArray = new char[BITS_IN_LONG];
 
             while (currentNumber != 0)
             {
                 int remainder = (int)(currentNumber % RADIX);
-                charArray[index--] = DIGITS[remainder];
+                charArray[index--] = _digits[remainder];
                 currentNumber = currentNumber / RADIX;
             }
-
-            string result = new String(charArray, index + 1, BITS_IN_LONG - index - 1);
-            if (decimalNumber < 0)
-            {
-                result = "-" + result;
-            }
-
-            return result;
+            return new String(charArray, index + 1, BITS_IN_LONG - index - 1);
         }
 
         /// <summary>

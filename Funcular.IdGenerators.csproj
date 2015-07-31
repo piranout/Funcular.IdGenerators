@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Base36\Base36IdGenerator.cs" />
+    <Compile Include="Base36\ConcurrentStopwatch.cs" />
     <Compile Include="BaseConversion\Base36Converter.cs" />
     <Compile Include="BaseConversion\BaseConverter.cs" />
     <Compile Include="ConcurrentRandom.cs" />

@@ -50,7 +50,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 #endregion
 
 
-
+// ReSharper disable RedundantArgumentDefaultValue
 namespace Funcular.IdGenerators.UnitTests
 {
     [TestClass]
@@ -175,3 +175,4 @@ namespace Funcular.IdGenerators.UnitTests
         }
     }
 }
+// ReSharper restore RedundantArgumentDefaultValue

@@ -43,50 +43,26 @@ using System.Diagnostics;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.BaseConversion;
 using Funcular.IdGenerators.Enums;
 #endregion
 
-
+// ReSharper disable RedundantCaseLabel
 namespace Funcular.IdGenerators.Base36
 {
     public class Base36IdGenerator
     {
         #region Private fields
         #region Static
-
-        private static readonly object _timestampLock = new object();
         private static readonly object _randomLock = new object();
-        private static readonly Mutex _timestampMutex;
-        private static readonly Mutex _randomMutex;
         private static string _hostHash;
         
-        // reserved byte, start at the max Base36 value, can decrement 
-        // up to 35 times when values are exhausted (every ~115 years),
-        // or repurpose as a discriminator if desired:
-        //private static int _reserved = 35;
-        //private static string _reservedHash;
         /// <summary>
         ///     This is UTC Epoch. In shorter Id implementations it was configurable, to allow
         ///     one to milk more longevity out of a shorter series of timestamps.
         /// </summary>
         private static DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        /// <summary>
-        ///     The timespan representing from Epoch until instantiated.
-        /// </summary>
-        private static TimeSpan _timeZero;
-
-        private static readonly DateTime _lastInitialized = DateTime.UtcNow;
-        private static long _lastMicroseconds;
-
-        private static readonly Random _rnd;
-        private static readonly Stopwatch _sw;
-
-        private static SpinLock _locker = new SpinLock(true);
-
         #endregion
 
 
@@ -123,15 +99,8 @@ namespace Funcular.IdGenerators.Base36
         /// </summary>
         static Base36IdGenerator()
         {
-            Debug.WriteLine("Static constructor fired");
-            // TODO: Include inception date in mutex name to reduce vulnerability
-            // todo... to malicious use / DOS attacks (so, obscure the name).     
-            _timestampMutex = new Mutex(false, @"Global\Base36IdGeneratorTimestamp");
-            _randomMutex = new Mutex(false, @"Global\Base36IdGeneratorRandom");
-            _rnd = new Random();
             _randomLock = new object();
-            _timeZero = _lastInitialized.Subtract(_epoch);
-            _sw = Stopwatch.StartNew();
+            Stopwatch.StartNew();
         }
 
         ///     The default Id format is 11 characters for the timestamp (4170 year lifespan),
@@ -174,7 +143,6 @@ namespace Funcular.IdGenerators.Base36
                     _epoch = inService;
             }
 
-            _timeZero = _lastInitialized.Subtract(_epoch);
             InitStaticMicroseconds();
         }
 
@@ -402,22 +370,6 @@ namespace Funcular.IdGenerators.Base36
         internal static long GetMicrosecondsSafe()
         {
             return ConcurrentStopwatch.GetMicroseconds();
-            try
-            {
-                _timestampMutex.WaitOne();
-                long microseconds;
-                do
-                {
-                    microseconds = (_timeZero.Add(_sw.Elapsed).TotalMicroseconds());
-                }
-                while (microseconds <= Thread.VolatileRead(ref _lastMicroseconds));
-                Interlocked.Exchange(ref _lastMicroseconds, microseconds);
-                return microseconds;
-            }
-            finally
-            {
-                _timestampMutex.ReleaseMutex();
-            }
         }
 
         /// <summary>
@@ -429,22 +381,11 @@ namespace Funcular.IdGenerators.Base36
         internal static long GetMicroseconds()
         {
             return ConcurrentStopwatch.GetMicroseconds();
-            lock (_timestampLock)
-            {
-                long microseconds;
-                do
-                {
-                    microseconds = (_timeZero.Add(_sw.Elapsed).TotalMicroseconds());
-                }
-                while (microseconds <= Thread.VolatileRead(ref _lastMicroseconds));
-                Thread.VolatileWrite(ref _lastMicroseconds, microseconds);
-                return microseconds;
-            }
         }
 
         private static void InitStaticMicroseconds()
         {
-            _lastMicroseconds = GetMicroseconds();
+            GetMicroseconds();
         }
 
         /// <summary>
@@ -479,64 +420,5 @@ namespace Funcular.IdGenerators.Base36
 
         #endregion
     }
-
-    public static class ConcurrentStopwatch
-    {
-        private static readonly DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
-        [ThreadStatic] private static Stopwatch _sw;
-                               
-        [ThreadStatic] private static DateTime _lastInitialized;
-                               
-        [ThreadStatic] private static TimeSpan _timeZero;
-
-        public static long GetMicroseconds()
-        {
-            return TimeZero.Add(Instance.Elapsed).TotalMicroseconds();
-        }
-
-        public static TimeSpan Elapsed
-        {
-            get { return Instance.Elapsed; }
-        }
-
-        public static Stopwatch Instance
-        {
-            get
-            {
-                if (_sw == null)
-                {
-                    Init();
-                }
-                return _sw;
-            }
-        }
-
-        private static void Init()
-        {
-            _sw = Stopwatch.StartNew();
-            _lastInitialized = DateTime.Now;
-            _timeZero = _lastInitialized.Subtract(_epoch);
-        }
-
-        public static DateTime LastInitialized
-        {
-            get
-            {
-                if (_lastInitialized == default(DateTime))
-                    Init();
-                return _lastInitialized;
-            }
-        }
-
-        public static TimeSpan TimeZero
-        {
-            get
-            {
-                if (_timeZero == default(TimeSpan))
-                    Init();
-                return _timeZero;
-            }
-        }
-    }
 }
+// ReSharper restore RedundantCaseLabel
