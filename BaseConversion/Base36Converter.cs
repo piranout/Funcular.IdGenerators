@@ -51,6 +51,8 @@ namespace Funcular.IdGenerators.BaseConversion
 {
     public static class Base36Converter
     {
+        private const int BITS_IN_LONG = 64;
+        private const int BASE = 36;
         private static string _charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private static readonly char[] _digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
 
@@ -92,23 +94,23 @@ namespace Funcular.IdGenerators.BaseConversion
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FromLong(long decimalNumber)
         {
-            const int BITS_IN_LONG = 64;
             int index = BITS_IN_LONG - 1;
-            const int RADIX = 36;
 
             if (decimalNumber == 0)
                 return "0";
 
             long currentNumber = Math.Abs(decimalNumber);
             char[] charArray = new char[BITS_IN_LONG];
-
-            while (currentNumber != 0)
+            unchecked
             {
-                int remainder = (int)(currentNumber % RADIX);
-                charArray[index--] = _digits[remainder];
-                currentNumber = currentNumber / RADIX;
+                while (currentNumber != 0)
+                {
+                    int remainder = (int)(currentNumber % BASE);
+                    charArray[index--] = _digits[remainder];
+                    currentNumber = currentNumber / BASE;
+                }
+                return new string(charArray, index + 1, BITS_IN_LONG - index - 1);
             }
-            return new String(charArray, index + 1, BITS_IN_LONG - index - 1);
         }
 
         /// <summary>

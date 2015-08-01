@@ -41,6 +41,7 @@ using System;
 using System.Configuration;
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Funcular.ExtensionMethods;
@@ -218,7 +219,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns></returns>
         public string Format(string id)
         {
-            if (!id.HasWordValue() || id.Contains(_delimiter, StringComparison.OrdinalIgnoreCase))
+            if (!id.IsNonWhitespace() || id.Contains(_delimiter, StringComparison.OrdinalIgnoreCase))
                 return id;
             StringBuilder sb = new StringBuilder(id);
             foreach (var pos in this._delimiterPositions)
@@ -392,30 +393,17 @@ namespace Funcular.IdGenerators.Base36
         ///     Gets random component of Id, pre trimmed and padded to the correct length.
         /// </summary>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetRandomBase36DigitsSafe()
         {
             long number = ConcurrentRandom.Random.NextLong(this._maxRandom);
             string encoded = Base36Converter.FromLong(number);
-            return encoded.Length > this._numRandomCharacters ?
-                encoded.Truncate(this._numRandomCharacters) :
-                encoded.PadLeft(this._numRandomCharacters, '0');
-
-/*            if (_randomMutex.WaitOne())
-            {
-                long random = _rnd.NextLong(this._maxRandom);
-                string encoded = Base36Converter.FromLong(random);
-                try
-                {
-                    return encoded.Length > this._numRandomCharacters ?
-                        encoded.Truncate(this._numRandomCharacters) :
-                        encoded.PadLeft(this._numRandomCharacters, '0');
-                }
-                finally
-                {
-                    _randomMutex.ReleaseMutex();
-                }
-            }
-            throw new AbandonedMutexException();*/
+            return 
+                encoded.Length == this._numRandomCharacters 
+                ? encoded 
+                : encoded.Length > this._numRandomCharacters 
+                ? encoded.Substring(0, _numRandomCharacters) 
+                : encoded.PadLeft(this._numRandomCharacters, '0');
         }
 
         #endregion
