@@ -49,12 +49,17 @@ using System.Runtime.CompilerServices;
 
 namespace Funcular.IdGenerators.BaseConversion
 {
-    public static class Base36Converter
+    internal static class Base36Converter
     {
         private const int BITS_IN_LONG = 64;
         private const int BASE = 36;
         private static string _charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private static readonly char[] _digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+
+        static Base36Converter()
+        {
+            BaseConverter.CharList = _charList;
+        }
 
         /// <summary>
         ///     The character set for encoding. Defaults to upper-case alphanumerics 0-9, A-Z.
@@ -63,25 +68,21 @@ namespace Funcular.IdGenerators.BaseConversion
 
         public static string FromHex(string hex)
         {
-            BaseConverter.CharList = _charList;
             return BaseConverter.Convert(hex.ToUpper(), 16, 36);
         }
 
         public static string FromGuid(Guid guid)
         {
-            BaseConverter.CharList = _charList;
             return BaseConverter.Convert(guid.ToString("N"), 16, 36);
         }
 
         public static string FromInt32(int int32)
         {
-            BaseConverter.CharList = _charList;
             return BaseConverter.Convert(int32.ToString(CultureInfo.InvariantCulture), 10, 36);
         }
 
         public static string FromInt64(long int64)
         {
-            BaseConverter.CharList = _charList;
             return BaseConverter.Convert(number: int64.ToString(CultureInfo.InvariantCulture), fromBase: 10, toBase: 36);
         }
 
@@ -120,16 +121,17 @@ namespace Funcular.IdGenerators.BaseConversion
         /// <returns></returns>
         public static String Encode(long input)
         {
-            if (input < 0)
-                throw new ArgumentOutOfRangeException("input", input, "input cannot be negative");
-            char[] clistarr = CharList.ToCharArray();
-            var result = new Stack<char>();
-            while (input != 0)
+            unchecked
             {
-                result.Push(clistarr[input%36]);
-                input /= 36;
+                //char[] clistarr = CharList.ToCharArray();
+                var result = new Stack<char>();
+                while (input != 0)
+                {
+                    result.Push(_digits[input % 36]);
+                    input /= 36;
+                }
+                return new string(result.ToArray());
             }
-            return new string(result.ToArray());
         }
 
         /// <summary>
@@ -139,15 +141,18 @@ namespace Funcular.IdGenerators.BaseConversion
         /// <returns></returns>
         public static Int64 Decode(string input)
         {
-            IEnumerable<char> reversed = input.ToUpper().Reverse();
-            long result = 0;
-            int pos = 0;
-            foreach (var c in reversed)
+            unchecked
             {
-                result += CharList.IndexOf(c)*(long) Math.Pow(36, pos);
-                pos++;
+                IEnumerable<char> reversed = input.ToUpper().Reverse();
+                long result = 0;
+                int pos = 0;
+                foreach (var c in reversed)
+                {
+                    result += CharList.IndexOf(c) * (long)Math.Pow(36, pos);
+                    pos++;
+                }
+                return result;
             }
-            return result;
         }
     }
 }

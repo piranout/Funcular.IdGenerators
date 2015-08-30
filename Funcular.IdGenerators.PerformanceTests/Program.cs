@@ -13,37 +13,73 @@ namespace Funcular.IdGenerators.PerformanceTests
         private static void Main(string[] args)
         {
 
-            var seconds = 10;
+            var seconds = 20;
             Console.WriteLine("Begin performance testing; {0} seconds each async/sync…", seconds);
             Console.WriteLine(); 
             _tests = SetupTests();
-            RunAsyncTest(seconds);
-            RunSyncTest(seconds);
+            long asyncAggregate=0;
+            long syncAggregate = 0;
+            long timestampAggregate = 0;
+            // get some initialization out of the way:
+            RunAsyncTest(5);
+            Console.Clear();
+            var includeTimestampTests = args.Length > 0 && args[0].ToUpper() == "T";
+            int i;
+            for (i = 0; i < 10; i++)
+            {
+                if(includeTimestampTests)
+                    timestampAggregate += RunTimestampTest(seconds);
+                asyncAggregate += RunAsyncTest(seconds);
+                syncAggregate += RunSyncTest(seconds);
+            }
+            if (includeTimestampTests)
+                Console.WriteLine("\r\nTimestamp avg: {0:n0}/s", timestampAggregate / i);
+            Console.WriteLine("\r\nAsync average: {0:n0}/s", asyncAggregate / i);
+            Console.WriteLine("\r\n Sync average: {0:n0}/s", syncAggregate / i);
+
             Console.WriteLine("\r\n");
             PromptKey("Press any key to exit... ");
         }
 
-        private static void RunSyncTest(int seconds)
+        private static int RunSyncTest(int seconds)
         {
             var sw = Stopwatch.StartNew();
             var testSingleThreaded = _tests.TestSingleThreaded(seconds);
             var count = testSingleThreaded;
             sw.Stop();
             Console.WriteLine();
+            var rate = count/sw.Elapsed.Seconds;
             Console.WriteLine("Synchronously:\tCreated {0:n0} Ids in {1}; rate {2:n0}/s", count, sw.Elapsed,
-                count/sw.Elapsed.Seconds);
+                rate);
+            return rate;
         }
 
-        private static void RunAsyncTest(int seconds)
+        private static int RunAsyncTest(int seconds)
         {
             var processors = Environment.ProcessorCount + 1;
             var sw = Stopwatch.StartNew();
             var count = _tests.TestMultithreaded(seconds, processors);
             sw.Stop();
             Console.WriteLine();
+            var rate = count/sw.Elapsed.Seconds;
             Console.WriteLine("Asynchronously:\tCreated {0:n0} Ids in {1}; rate {2:n0}/s", count, sw.Elapsed,
-                count/sw.Elapsed.Seconds);
+                rate);
+            return rate;
         }
+
+        private static int RunTimestampTest(int seconds)
+        {
+            var processors = Environment.ProcessorCount + 1;
+            var sw = Stopwatch.StartNew();
+            var count = _tests.TestTimestampUniqueness(seconds, processors);
+            sw.Stop();
+            Console.WriteLine();
+            var rate = count / sw.Elapsed.Seconds;
+            Console.WriteLine("Asynchronously:\tCreated {0:n0} timestamps in {1}; rate {2:n0}/s", count, sw.Elapsed,
+                rate);
+            return rate;
+        }
+
 
         private static PerformanceTests SetupTests()
         {

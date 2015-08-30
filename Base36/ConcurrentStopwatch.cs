@@ -8,15 +8,29 @@ namespace Funcular.IdGenerators.Base36
     {
         private static readonly DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        [ThreadStatic] private static Stopwatch _sw;
-                               
-        [ThreadStatic] private static DateTime _lastInitialized;
-                               
-        [ThreadStatic] private static TimeSpan _timeZero;
+        private static readonly object _lock = new object();
+
+        private static Stopwatch _sw;
+
+        private static long _lastMicroseconds;
+
+        [ThreadStatic]
+        private static DateTime _lastInitialized;
+
+        [ThreadStatic]
+        private static TimeSpan _timeZero;
+
 
         public static long GetMicroseconds()
         {
-            return TimeZero.Add(Instance.Elapsed).TotalMicroseconds();
+            long microseconds = _lastMicroseconds;
+            while (microseconds == _lastMicroseconds)
+            {
+                microseconds = TimeZero.Add(Instance.Elapsed).TotalMicroseconds();
+            }
+            _lastMicroseconds = microseconds;
+            return microseconds;
+
         }
 
         public static TimeSpan Elapsed
@@ -41,6 +55,7 @@ namespace Funcular.IdGenerators.Base36
             _sw = Stopwatch.StartNew();
             _lastInitialized = DateTime.Now;
             _timeZero = _lastInitialized.Subtract(_epoch);
+            _lastMicroseconds = DateTime.UtcNow.AddDays(1).Ticks / 10;
         }
 
         public static DateTime LastInitialized

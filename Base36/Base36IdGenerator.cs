@@ -56,7 +56,7 @@ namespace Funcular.IdGenerators.Base36
     {
         #region Private fields
         #region Static
-        private static readonly object _randomLock = new object();
+        private static readonly object _randomLock;
         private static string _hostHash;
         
         /// <summary>
@@ -101,7 +101,6 @@ namespace Funcular.IdGenerators.Base36
         static Base36IdGenerator()
         {
             _randomLock = new object();
-            Stopwatch.StartNew();
         }
 
         ///     The default Id format is 11 characters for the timestamp (4170 year lifespan),
@@ -180,34 +179,36 @@ namespace Funcular.IdGenerators.Base36
         {
             // Keep access sequential so threads cannot accidentally
             // read another thread's values within this method:
-            StringBuilder sb;
-            sb = new StringBuilder();
+            var sb = new StringBuilder();
 
             // Microseconds since InService (using Stopwatch) provides the 
             // first n chars (n = _numTimestampCharacters):
-            long microseconds = GetMicrosecondsSafe();
-            string base36Microseconds = Base36Converter.FromLong(microseconds);
-            if (base36Microseconds.Length > this._numTimestampCharacters)
-                base36Microseconds = base36Microseconds.Truncate(this._numTimestampCharacters);
-            sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
-
-            sb.Append(_hostHash);
-
-            if (this._reservedValue.HasValue())
+            lock(sb)
             {
-                sb.Append(this._reservedValue);
-                sb.Length += this._reservedValue.Length; // Truncates
-            }
-            // Add the random component:
-            sb.Append(GetRandomBase36DigitsSafe());
+                long microseconds = GetMicrosecondsSafe();
+                string base36Microseconds = Base36Converter.FromLong(microseconds);
+                if (base36Microseconds.Length > this._numTimestampCharacters)
+                    base36Microseconds = base36Microseconds.Truncate(this._numTimestampCharacters);
+                sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
 
-            if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
+                sb.Append(_hostHash);
+
+                if (this._reservedValue.HasValue())
+                {
+                    sb.Append(this._reservedValue);
+                    sb.Length += this._reservedValue.Length; // Truncates
+                }
+                // Add the random component:
+                sb.Append(GetRandomBase36DigitsSafe());
+
+                if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
+                    return sb.ToString();
+                foreach (var pos in this._delimiterPositions)
+                {
+                    sb.Insert(pos, this._delimiter);
+                }
                 return sb.ToString();
-            foreach (var pos in this._delimiterPositions)
-            {
-                sb.Insert(pos, this._delimiter);
             }
-            return sb.ToString();
         }
 
         /// <summary>
