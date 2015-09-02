@@ -32,7 +32,7 @@ Console.WriteLine(generator.NewId(delimited: true));
 #### Requirements Met
 * Ids must be ascending across a distributed environment
 * Ids must not collide for the lifetime of the application, even in high-demand, distributed environments
-* Ids must not be guessable; people should not be able to increment values and  
+* Ids must not be guessable; potential attackers should not be able to deduce any actual Ids using previous examples
 * Ids must be assigned expecting case-insensitivity (SQL Server’s default collation)
 * Ids should be of shorter length than Guids / UNIQUEIDENTIFIERs
 * Dashes should be optional and not considered part of the Id
