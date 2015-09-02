@@ -27,10 +27,12 @@ Console.WriteLine(generator.NewId(delimited: true));
 * SQL IDENTITY columns couple Id assignment with a database connection, creating a single point of failure, and restricting the ability to create object graphs in a disconnected operation.
 * Guids / SQL UNIQUEIDENTIFIERs are terrible for clustered indexing, are not practically speakable, and look ugly.
 * Sequential Guids / SQL SEQUENTIALIDs are extremely cumbersome to manage, aren't synchronized between app servers and database servers, nor in distributed environments. They also create tight coupling between application processes and the database server.
+* This approach facilitates datastore-agnostic platforms, eases replication, and makes data significantly more portable
 
 #### Requirements Met
 * Ids must be ascending across a distributed environment
 * Ids must not collide for the lifetime of the application, even in high-demand, distributed environments
+* Ids must not be guessable; people should not be able to increment values and  
 * Ids must be assigned expecting case-insensitivity (SQL Server’s default collation)
 * Ids should be of shorter length than Guids / UNIQUEIDENTIFIERs
 * Dashes should be optional and not considered part of the Id
@@ -45,7 +47,7 @@ Ids are composed of some combination of a timestamp, a server hash, a reserved c
 	* Ascending over 115 year lifespan
 	* Less than 1300 possible hash combinations for server component
 	* ~46k hash combinations for random component
-* Base36 [20]: `040VZ-C6SL0-1003B-Z00R2`
+* Base36 [20] (recommended): `040VZ-C6SL0-1003B-Z00R2`
 	* Structure: 11 + 4 + 0 + 5 (no reserved character)
 	* Ascending over 4,170 year lifespan
 	* 1.6 million possible hash combinations for server component
