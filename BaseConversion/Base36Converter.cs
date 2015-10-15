@@ -95,15 +95,16 @@ namespace Funcular.IdGenerators.BaseConversion
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FromLong(long decimalNumber)
         {
-            int index = BITS_IN_LONG - 1;
-
-            if (decimalNumber == 0)
-                return "0";
-
-            long currentNumber = Math.Abs(decimalNumber);
-            char[] charArray = new char[BITS_IN_LONG];
             unchecked
             {
+                int index = BITS_IN_LONG - 1;
+
+                if (decimalNumber == 0)
+                    return "0";
+
+                long currentNumber = Math.Abs(decimalNumber);
+                char[] charArray = new char[BITS_IN_LONG];
+            
                 while (currentNumber != 0)
                 {
                     int remainder = (int)(currentNumber % BASE);
@@ -119,6 +120,7 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static String Encode(long input)
         {
             unchecked
@@ -139,6 +141,7 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int64 Decode(string input)
         {
             unchecked

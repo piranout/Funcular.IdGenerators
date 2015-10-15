@@ -397,14 +397,17 @@ namespace Funcular.IdGenerators.Base36
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetRandomBase36DigitsSafe()
         {
-            long number = ConcurrentRandom.Random.NextLong(this._maxRandom);
-            string encoded = Base36Converter.FromLong(number);
-            return 
-                encoded.Length == this._numRandomCharacters 
-                ? encoded 
-                : encoded.Length > this._numRandomCharacters 
-                ? encoded.Substring(0, _numRandomCharacters) 
-                : encoded.PadLeft(this._numRandomCharacters, '0');
+            lock (_randomLock)
+            {
+                long number = ConcurrentRandom.Random.NextLong(this._maxRandom);
+                string encoded = Base36Converter.FromLong(number);
+                return 
+                    encoded.Length == this._numRandomCharacters 
+                        ? encoded 
+                        : encoded.Length > this._numRandomCharacters 
+                            ? encoded.Substring(0, _numRandomCharacters) 
+                            : encoded.PadLeft(this._numRandomCharacters, '0');
+            }
         }
 
         #endregion

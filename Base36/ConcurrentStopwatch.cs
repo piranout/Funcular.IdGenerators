@@ -14,40 +14,24 @@ namespace Funcular.IdGenerators.Base36
 
         private static long _lastMicroseconds;
 
-        [ThreadStatic]
         private static DateTime _lastInitialized;
 
-        [ThreadStatic]
         private static TimeSpan _timeZero;
 
 
         public static long GetMicroseconds()
         {
-            long microseconds = _lastMicroseconds;
-            while (microseconds == _lastMicroseconds)
+            lock (_lock)
             {
-                microseconds = TimeZero.Add(Instance.Elapsed).TotalMicroseconds();
-            }
-            _lastMicroseconds = microseconds;
-            return microseconds;
-
-        }
-
-        public static TimeSpan Elapsed
-        {
-            get { return Instance.Elapsed; }
-        }
-
-        public static Stopwatch Instance
-        {
-            get
-            {
-                if (_sw == null)
+                long microseconds = _lastMicroseconds;
+                while (microseconds == _lastMicroseconds)
                 {
-                    Init();
+                    microseconds = TimeZero.Add(_sw.Elapsed).TotalMicroseconds();
                 }
-                return _sw;
+                _lastMicroseconds = microseconds;
+                return microseconds;
             }
+
         }
 
         private static void Init()
