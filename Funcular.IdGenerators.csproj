@@ -69,6 +69,7 @@
     <None Include="NuGet\Funcular.IdGenerators.0.5.0.0.nupkg" />
     <None Include="NuGet\Funcular.IdGenerators.0.5.0.1.nupkg" />
     <None Include="NuGet\Funcular.IdGenerators.0.5.0.2.nupkg" />
+    <None Include="NuGet\Funcular.IdGenerators.1.1.0.nupkg" />
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>
