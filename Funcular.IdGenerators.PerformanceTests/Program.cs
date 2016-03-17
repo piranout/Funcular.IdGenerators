@@ -25,7 +25,7 @@ namespace Funcular.IdGenerators.PerformanceTests
             Console.Clear();
             var includeTimestampTests = args.Length > 0 && args[0].ToUpper() == "T";
             int i;
-            for (i = 0; i < 10; i++)
+            for (i = 0; i < 3; i++)
             {
                 if(includeTimestampTests)
                     timestampAggregate += RunTimestampTest(seconds);

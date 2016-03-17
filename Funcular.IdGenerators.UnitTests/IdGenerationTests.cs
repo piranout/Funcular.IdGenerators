@@ -94,6 +94,21 @@ namespace Funcular.IdGenerators.UnitTests
         }
 
         [TestMethod]
+        public void Server_Hash_Does_Not_Throw()
+        {
+            string result;
+            try
+            {
+                Assert.IsTrue((result = this._idGenerator.ComputeHostHash("RD00155DC193F9")).HasValue());
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                Assert.Fail();
+            }
+        }
+
+        [TestMethod]
         public void Id_Length_Is_Correct()
         {
             // These are the segment lengths passed to the constructor:

@@ -3,7 +3,7 @@
 // *********************************************************************************************************
 // Funcular.IdGenerators>Funcular.IdGenerators>Base36IdGenerator.cs
 // Created: 2015-06-26 2:57 PM
-// Updated: 2015-06-30 10:18 AM
+// Updated: 2013-03-17 10:18 AM
 // By: Paul Smith 
 // 
 // *********************************************************************************************************
@@ -40,11 +40,11 @@
 using System;
 using System.Configuration;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.BaseConversion;
 using Funcular.IdGenerators.Enums;
 #endregion
@@ -58,7 +58,7 @@ namespace Funcular.IdGenerators.Base36
         #region Static
         private static readonly object _randomLock;
         private static string _hostHash;
-        
+        private static readonly Random _random = new Random();
         /// <summary>
         ///     This is UTC Epoch. In shorter Id implementations it was configurable, to allow
         ///     one to milk more longevity out of a shorter series of timestamps.
@@ -77,6 +77,7 @@ namespace Funcular.IdGenerators.Base36
         private readonly int _numServerCharacters;
         private readonly int _numTimestampCharacters;
         private readonly string _reservedValue;
+        private static string _hashBase36;
 
         #endregion
         #endregion
@@ -133,10 +134,10 @@ namespace Funcular.IdGenerators.Base36
 
             Debug.WriteLine("Instance constructor fired");
 
-            string appSettingValue;
+            string appSettingValue = null;
             if (ConfigurationManager.AppSettings.HasKeys()
-                && ConfigurationManager.AppSettings.AllKeys.Contains("base36IdInceptionDate")
-                && (appSettingValue = ConfigurationManager.AppSettings["base36IdInceptionDate"]).HasValue())
+                && ConfigurationManager.AppSettings.AllKeys.Any(s => s.Equals("base36IdInceptionDate", StringComparison.OrdinalIgnoreCase))
+                && !string.IsNullOrWhiteSpace((appSettingValue = ConfigurationManager.AppSettings["base36IdInceptionDate"]) ?? ""))
             {
                 DateTime inService;
                 if (DateTime.TryParse(appSettingValue, out inService))
@@ -188,12 +189,12 @@ namespace Funcular.IdGenerators.Base36
                 long microseconds = GetMicrosecondsSafe();
                 string base36Microseconds = Base36Converter.FromLong(microseconds);
                 if (base36Microseconds.Length > this._numTimestampCharacters)
-                    base36Microseconds = base36Microseconds.Truncate(this._numTimestampCharacters);
+                    base36Microseconds = base36Microseconds.Substring(0, this._numTimestampCharacters);
                 sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
 
                 sb.Append(_hostHash);
 
-                if (this._reservedValue.HasValue())
+                if (!string.IsNullOrWhiteSpace(this._reservedValue))
                 {
                     sb.Append(this._reservedValue);
                     sb.Length += this._reservedValue.Length; // Truncates
@@ -201,7 +202,7 @@ namespace Funcular.IdGenerators.Base36
                 // Add the random component:
                 sb.Append(GetRandomBase36DigitsSafe());
 
-                if (!delimited || !this._delimiter.HasValue() || !this._delimiterPositions.HasContents())
+                if (!delimited || string.IsNullOrWhiteSpace(_delimiter) || this._delimiterPositions == null)
                     return sb.ToString();
                 foreach (var pos in this._delimiterPositions)
                 {
@@ -220,7 +221,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns></returns>
         public string Format(string id)
         {
-            if (!id.IsNonWhitespace() || id.Contains(_delimiter, StringComparison.OrdinalIgnoreCase))
+            if (string.IsNullOrWhiteSpace(id) || id.Contains(_delimiter))
                 return id;
             StringBuilder sb = new StringBuilder(id);
             foreach (var pos in this._delimiterPositions)
@@ -235,22 +236,25 @@ namespace Funcular.IdGenerators.Base36
         ///     numServerCharacters controls the maximum length of this hash.
         /// </summary>
         /// <returns>2 character Base36 checksum of MD5 of hostname</returns>
-        public string ComputeHostHash()
+        public string ComputeHostHash(string hostname = null)
         {
-            string hostname = Dns.GetHostName();
-            if (!hostname.HasValue())
-                hostname = Environment.MachineName;
+            if (_hashBase36 != null)
+                return _hashBase36;
+            if (string.IsNullOrWhiteSpace(hostname))
+                hostname = Dns.GetHostName()
+                    ?? Environment.MachineName;
             string hashHex;
             using (var sha1 = new SHA1Managed())
             {
                 hashHex = BitConverter.ToString(sha1.ComputeHash(Encoding.UTF8.GetBytes(hostname)));
                 if (hashHex.Length > 14) // > 14 chars overflows int64
-                    hashHex = hashHex.Truncate(14);
+                    hashHex = hashHex.Substring(0, 14);
             }
             string hashBase36 = Base36Converter.FromHex(hashHex);
-            if (hashBase36.Length > this._numServerCharacters)
-                hashBase36 = hashBase36.Truncate(this._numServerCharacters);
-            return hashBase36;
+            _hashBase36 = hashBase36;
+            if (_hashBase36.Length > this._numServerCharacters)
+                _hashBase36 = _hashBase36.Substring(0, this._numServerCharacters);
+            return _hashBase36;
         }
 
         /// <summary>
@@ -260,14 +264,16 @@ namespace Funcular.IdGenerators.Base36
         public string GetRandomString(int length)
         {
             if (length < 1 || length > 12)
-                throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
             lock (_randomLock)
             {
                 var maxRandom = (long)Math.Pow(36, length);
-                long random = ConcurrentRandom.Random.NextLong(maxRandom);
+                byte[] buffer = new byte[8];
+                _random.NextBytes(buffer);
+                var random = Math.Abs(BitConverter.ToInt64(buffer, 0) % maxRandom);
                 string encoded = Base36Converter.FromLong(random);
                 return encoded.Length > length ?
-                    encoded.Truncate(length) :
+                    encoded.Substring(0, length) :
                     encoded.PadLeft(length, '0');
             }
         }
@@ -289,7 +295,7 @@ namespace Funcular.IdGenerators.Base36
         public string GetTimestamp(int length, TimestampResolution resolution = TimestampResolution.Microsecond, DateTime? sinceUtc = null, bool strict = false)
         {
             if (length < 1 || length > 12)
-                throw new ArgumentOutOfRangeException("length", "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
+                throw new ArgumentOutOfRangeException(nameof(length), "Length must be between 1 and 12; 36^13 overflows Int64.MaxValue");
             var origin = sinceUtc ?? _epoch;
             var elapsed = DateTime.UtcNow.Subtract(origin);
             long intervals;
@@ -311,14 +317,14 @@ namespace Funcular.IdGenerators.Base36
                     intervals = Convert.ToInt64(elapsed.TotalMilliseconds);
                     break;
                 case TimestampResolution.Microsecond:
-                    intervals = elapsed.TotalMicroseconds();
+                    intervals = (long)(elapsed.TotalMilliseconds * 1000.0); // elapsed.TotalMicroseconds();
                     break;
                 case TimestampResolution.Ticks:
                     intervals = elapsed.Ticks;
                     break;
                 case TimestampResolution.None:
                 default:
-                    throw new ArgumentOutOfRangeException("resolution");
+                    throw new ArgumentOutOfRangeException(nameof(resolution));
             }
             var combinations = Math.Pow(36, length);
             if (combinations < intervals)
@@ -331,7 +337,7 @@ namespace Funcular.IdGenerators.Base36
             }
             string encoded = Base36Converter.FromLong(intervals);
             return encoded.Length > length ?
-                encoded.Truncate(length) :
+                encoded.Substring(0, length) :
                 encoded.PadLeft(length, '0');
         }
 
@@ -346,18 +352,18 @@ namespace Funcular.IdGenerators.Base36
         private static void ValidateConstructorArguments(int numTimestampCharacters, int numServerCharacters, int numRandomCharacters)
         {
             if (numTimestampCharacters > 12)
-                throw new ArgumentOutOfRangeException("numTimestampCharacters", "The maximum characters in any component is 12.");
+                throw new ArgumentOutOfRangeException(nameof(numTimestampCharacters), "The maximum characters in any component is 12.");
             if (numServerCharacters > 12)
-                throw new ArgumentOutOfRangeException("numServerCharacters", "The maximum characters in any component is 12.");
+                throw new ArgumentOutOfRangeException(nameof(numServerCharacters), "The maximum characters in any component is 12.");
             if (numRandomCharacters > 12)
-                throw new ArgumentOutOfRangeException("numRandomCharacters", "The maximum characters in any component is 12.");
+                throw new ArgumentOutOfRangeException(nameof(numRandomCharacters), "The maximum characters in any component is 12.");
 
             if (numTimestampCharacters < 0)
-                throw new ArgumentOutOfRangeException("numTimestampCharacters", "Number must not be negative.");
+                throw new ArgumentOutOfRangeException(nameof(numTimestampCharacters), "Number must not be negative.");
             if (numServerCharacters < 0)
-                throw new ArgumentOutOfRangeException("numServerCharacters", "Number must not be negative.");
+                throw new ArgumentOutOfRangeException(nameof(numServerCharacters), "Number must not be negative.");
             if (numRandomCharacters < 0)
-                throw new ArgumentOutOfRangeException("numRandomCharacters", "Number must not be negative.");
+                throw new ArgumentOutOfRangeException(nameof(numRandomCharacters), "Number must not be negative.");
         }
 
         /// <summary>
@@ -399,7 +405,9 @@ namespace Funcular.IdGenerators.Base36
         {
             lock (_randomLock)
             {
-                long number = ConcurrentRandom.Random.NextLong(this._maxRandom);
+                byte[] buffer = new byte[8];
+                _random.NextBytes(buffer);
+                var number = Math.Abs(BitConverter.ToInt64(buffer, 0) % this._maxRandom);
                 string encoded = Base36Converter.FromLong(number);
                 return 
                     encoded.Length == this._numRandomCharacters 

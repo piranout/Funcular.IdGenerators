@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using Funcular.ExtensionMethods;
 
 namespace Funcular.IdGenerators.Base36
@@ -10,7 +11,7 @@ namespace Funcular.IdGenerators.Base36
 
         private static readonly object _lock = new object();
 
-        private static Stopwatch _sw;
+        private static readonly Stopwatch _sw = Stopwatch.StartNew();
 
         private static long _lastMicroseconds;
 
@@ -18,15 +19,15 @@ namespace Funcular.IdGenerators.Base36
 
         private static TimeSpan _timeZero;
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetMicroseconds()
         {
             lock (_lock)
             {
                 long microseconds = _lastMicroseconds;
-                while (microseconds == _lastMicroseconds)
+                while (microseconds <= _lastMicroseconds)
                 {
-                    microseconds = TimeZero.Add(_sw.Elapsed).TotalMicroseconds();
+                    microseconds = (long) (_sw.Elapsed.TotalMilliseconds*1000.0);// TimeZero.Add(_sw.Elapsed).TotalMicroseconds();
                 }
                 _lastMicroseconds = microseconds;
                 return microseconds;
@@ -36,7 +37,7 @@ namespace Funcular.IdGenerators.Base36
 
         private static void Init()
         {
-            _sw = Stopwatch.StartNew();
+            _sw.Restart();
             _lastInitialized = DateTime.Now;
             _timeZero = _lastInitialized.Subtract(_epoch);
             _lastMicroseconds = DateTime.UtcNow.AddDays(1).Ticks / 10;

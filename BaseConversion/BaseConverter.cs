@@ -75,37 +75,46 @@ namespace Funcular.IdGenerators.BaseConversion
         {
             /*if (string.IsNullOrEmpty(_charList))
                 throw new FormatException("You must populate .CharList before calling Convert().");*/
+            number = string.Join("", number.Split(new[] {" ", "-", ",", "."}, StringSplitOptions.RemoveEmptyEntries));
             unchecked
             {
-                int length = number.Length;
-                string result = string.Empty;
-                List<int> nibbles = number.Select(c => CharList.IndexOf(c)).ToList();
-                int newlen;
-                do
+                string result = null;
+                try
                 {
-                    int value = 0;
-                    newlen = 0;
-                    for (int i = 0; i < length; ++i)
+                    int length = number.Length;
+                    result = string.Empty;
+                    List<int> nibbles = number.Select(c => CharList.IndexOf(c)).ToList();
+                    int newlen;
+                    do
                     {
-                        value = value*fromBase + nibbles[i];
-                        if (value >= toBase)
+                        int value = 0;
+                        newlen = 0;
+                        for (int i = 0; i < length; ++i)
                         {
-                            if (newlen == nibbles.Count)
-                                nibbles.Add(0);
-                            nibbles[newlen++] = value/toBase;
-                            value %= toBase;
+                            value = value*fromBase + nibbles[i];
+                            if (value >= toBase)
+                            {
+                                if (newlen == nibbles.Count)
+                                    nibbles.Add(0);
+                                nibbles[newlen++] = value/toBase;
+                                value %= toBase;
+                            }
+                            else if (newlen > 0)
+                            {
+                                if (newlen == nibbles.Count)
+                                    nibbles.Add(0);
+                                nibbles[newlen++] = 0;
+                            }
                         }
-                        else if (newlen > 0)
-                        {
-                            if (newlen == nibbles.Count)
-                                nibbles.Add(0);
-                            nibbles[newlen++] = 0;
-                        }
+                        length = newlen;
+                        result = CharList[value] + result;
                     }
-                    length = newlen;
-                    result = CharList[value] + result;
+                    while (newlen != 0);
                 }
-                while (newlen != 0);
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
                 return result;
             }
         }
