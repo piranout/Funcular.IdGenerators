@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
-using Funcular.ExtensionMethods;
 
 namespace Funcular.IdGenerators.Base36
 {
@@ -19,7 +18,6 @@ namespace Funcular.IdGenerators.Base36
 
         private static TimeSpan _timeZero;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static long GetMicroseconds()
         {
             lock (_lock)

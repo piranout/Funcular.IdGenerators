@@ -1,6 +1,5 @@
 using System;
 using System.Security.Cryptography;
-using Funcular.ExtensionMethods;
 
 namespace Funcular.IdGenerators
 {
@@ -25,7 +24,7 @@ namespace Funcular.IdGenerators
                 long value;
                 do
                 {
-                    value = Random.NextLong(_maxRandom);
+                    value = (long)(Random.NextDouble() * _maxRandom);
                 } while (value == _lastValue);
                 _lastValue = value;
                 return value;

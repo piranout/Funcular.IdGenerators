@@ -42,7 +42,8 @@ namespace Funcular.IdGenerators.PerformanceTests
             {
                 ThreadPool.QueueUserWorkItem((MakeIdsMultithreaded), source.Token);
             }
-            source.CancelAfter(TimeSpan.FromSeconds(seconds));
+            Thread.Sleep(TimeSpan.FromSeconds(seconds));
+            source.Cancel();// source.CancelAfter(TimeSpan.FromSeconds(seconds));
             for (var i = 0; i < seconds; i++)
             {
                 Console.Write("... ");
@@ -59,7 +60,8 @@ namespace Funcular.IdGenerators.PerformanceTests
             {
                 ThreadPool.QueueUserWorkItem((MakeIdsMultithreaded), source.Token);
             }
-            source.CancelAfter(TimeSpan.FromSeconds(seconds));
+            Thread.Sleep(TimeSpan.FromSeconds(seconds));
+            source.Cancel(); //After(TimeSpan.FromSeconds(seconds));
             for (var i = 0; i < seconds; i++)
             {
                 Console.Write("... ");

@@ -92,7 +92,6 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="decimalNumber">The number to convert.</param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static string FromLong(long decimalNumber)
         {
             unchecked
@@ -120,7 +119,6 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static String Encode(long input)
         {
             unchecked
@@ -141,7 +139,6 @@ namespace Funcular.IdGenerators.BaseConversion
         /// </summary>
         /// <param name="input"></param>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Int64 Decode(string input)
         {
             unchecked

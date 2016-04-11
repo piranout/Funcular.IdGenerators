@@ -400,7 +400,6 @@ namespace Funcular.IdGenerators.Base36
         ///     Gets random component of Id, pre trimmed and padded to the correct length.
         /// </summary>
         /// <returns></returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private string GetRandomBase36DigitsSafe()
         {
             lock (_randomLock)
