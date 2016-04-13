@@ -35,14 +35,6 @@
     <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Funcular.ExtensionMethods, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\Funcular.ExtensionMethods.1.0.0\lib\net45\Funcular.ExtensionMethods.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
-    <Reference Include="IQToolkit, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>packages\IQToolkit.1.0.0.0\lib\net40\IQToolkit.dll</HintPath>
-      <Private>True</Private>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
@@ -68,7 +60,7 @@
     <None Include="NuGet\Funcular.IdGenerators.1.1.0.nupkg" />
     <None Include="NuGet\Funcular.IdGenerators.2.0.nupkg" />
     <None Include="NuGet\Funcular.IdGenerators.2.1.nupkg" />
-    <None Include="packages.config" />
+    <None Include="NuGet\Funcular.IdGenerators.2.5.nupkg" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
