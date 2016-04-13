@@ -83,7 +83,7 @@ namespace Funcular.IdGenerators.PerformanceTests
 
         private static PerformanceTests SetupTests()
         {
-            _generator = new Base36IdGenerator(11, 4, 5, "", "-", new[] {15, 10, 5});
+            _generator = new Base36IdGenerator(11, 4, 5, null, "-", new[] {15, 10, 5});
             var tests = new PerformanceTests(_generator);
             return tests;
         }

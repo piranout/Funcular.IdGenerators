@@ -1,12 +1,14 @@
-using System;
+﻿using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 
 namespace Funcular.IdGenerators.Base36
 {
+    /// <summary>
+    /// Thread safe microseconds stopwatch implementation. 
+    /// </summary>
     public static class ConcurrentStopwatch
     {
-        private static readonly DateTime _epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        private static readonly DateTime _utcEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private static readonly object _lock = new object();
 
@@ -14,51 +16,32 @@ namespace Funcular.IdGenerators.Base36
 
         private static long _lastMicroseconds;
 
-        private static DateTime _lastInitialized;
+        private static readonly long _timeZeroMicroseconds;
 
-        private static TimeSpan _timeZero;
+        static ConcurrentStopwatch()
+        {
+            var lastInitialized = DateTime.UtcNow;
+            var timeZero = lastInitialized.Subtract(_utcEpoch);
+            _timeZeroMicroseconds = timeZero.Ticks/10;
+        }
 
+        /// <summary>
+        /// Returns the Unix time in microseconds (µ″ since UTC epoch)
+        /// </summary>
+        /// <returns></returns>
         public static long GetMicroseconds()
         {
             lock (_lock)
             {
-                long microseconds = _lastMicroseconds;
+                long microseconds = 0;
                 while (microseconds <= _lastMicroseconds)
                 {
-                    microseconds = (long) (_sw.Elapsed.TotalMilliseconds*1000.0);// TimeZero.Add(_sw.Elapsed).TotalMicroseconds();
+                    microseconds = _timeZeroMicroseconds + (_sw.Elapsed.Ticks/10);
                 }
                 _lastMicroseconds = microseconds;
                 return microseconds;
             }
 
-        }
-
-        private static void Init()
-        {
-            _sw.Restart();
-            _lastInitialized = DateTime.Now;
-            _timeZero = _lastInitialized.Subtract(_epoch);
-            _lastMicroseconds = DateTime.UtcNow.AddDays(1).Ticks / 10;
-        }
-
-        public static DateTime LastInitialized
-        {
-            get
-            {
-                if (_lastInitialized == default(DateTime))
-                    Init();
-                return _lastInitialized;
-            }
-        }
-
-        public static TimeSpan TimeZero
-        {
-            get
-            {
-                if (_timeZero == default(TimeSpan))
-                    Init();
-                return _timeZero;
-            }
         }
     }
 }

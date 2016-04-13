@@ -38,11 +38,10 @@
 #region Usings
 
 using System;
-using System.CodeDom.Compiler;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Runtime.CompilerServices;
+
 #endregion
 
 
@@ -55,6 +54,8 @@ namespace Funcular.IdGenerators.BaseConversion
         private const int BASE = 36;
         private static string _charList = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private static readonly char[] _digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray();
+        private static readonly char[] _fromLongBuffer = new char[BITS_IN_LONG];
+        private static readonly object _lock = new object();
 
         static Base36Converter()
         {
@@ -102,15 +103,17 @@ namespace Funcular.IdGenerators.BaseConversion
                     return "0";
 
                 long currentNumber = Math.Abs(decimalNumber);
-                char[] charArray = new char[BITS_IN_LONG];
-            
-                while (currentNumber != 0)
+
+                lock (_lock)
                 {
-                    int remainder = (int)(currentNumber % BASE);
-                    charArray[index--] = _digits[remainder];
-                    currentNumber = currentNumber / BASE;
+                    while (currentNumber != 0)
+                    {
+                        int remainder = (int)(currentNumber % BASE);
+                        _fromLongBuffer[index--] = _digits[remainder];
+                        currentNumber = currentNumber / BASE;
+                    }
+                    return new string(_fromLongBuffer, index + 1, BITS_IN_LONG - index - 1);
                 }
-                return new string(charArray, index + 1, BITS_IN_LONG - index - 1);
             }
         }
 

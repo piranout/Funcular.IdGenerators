@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -9,8 +10,8 @@ namespace Funcular.IdGenerators.PerformanceTests
 {
     internal class PerformanceTests
     {
-        private readonly ThreadLocal<Base36IdGenerator> _generator = new ThreadLocal<Base36IdGenerator>(() => new Base36IdGenerator(11,4,5,"","-",new []{15,10,5}));
-        private readonly ConcurrentDictionary<string, int> _ids = new ConcurrentDictionary<string, int>();
+        private readonly Base36IdGenerator _generator = new Base36IdGenerator(11, 4, 5, null, "-", new[] {15, 10, 5});
+        private readonly HashSet<string> _ids = new HashSet<string>();
         private readonly ConcurrentDictionary<long, TimeSpan> _timestamps = new ConcurrentDictionary<long, TimeSpan>();
         
         [ThreadStatic]
@@ -23,16 +24,20 @@ namespace Funcular.IdGenerators.PerformanceTests
 
         internal int TestSingleThreaded(int seconds)
         {
-            _ids.Clear();
+            string newId = _generator.NewId();
+            Console.WriteLine($"First Id generated: {newId}");
+            var hashSet = new HashSet<string>();
             var sw = Stopwatch.StartNew();
             while (sw.Elapsed.TotalSeconds < seconds)
             {
-                if (!_ids.TryAdd(_generator.Value.NewId(), Thread.CurrentThread.ManagedThreadId))
+                newId = _generator.NewId();
+                if (!hashSet.Add(newId))
                 {
                     throw new InvalidOperationException("Duplicate id!");
                 }
             }
-            return _ids.Count;
+            Console.WriteLine($"Last Id generated: {newId}\r\n");
+            return hashSet.Count;
         }
 
         internal int TestTimestampUniqueness(int seconds, int threads)
@@ -43,12 +48,7 @@ namespace Funcular.IdGenerators.PerformanceTests
                 ThreadPool.QueueUserWorkItem((MakeIdsMultithreaded), source.Token);
             }
             Thread.Sleep(TimeSpan.FromSeconds(seconds));
-            source.Cancel();// source.CancelAfter(TimeSpan.FromSeconds(seconds));
-            for (var i = 0; i < seconds; i++)
-            {
-                Console.Write("... ");
-                Thread.Sleep(1000);
-            }
+            source.Cancel();
             Console.WriteLine();
             return _ids.Count;
         }
@@ -61,52 +61,23 @@ namespace Funcular.IdGenerators.PerformanceTests
                 ThreadPool.QueueUserWorkItem((MakeIdsMultithreaded), source.Token);
             }
             Thread.Sleep(TimeSpan.FromSeconds(seconds));
-            source.Cancel(); //After(TimeSpan.FromSeconds(seconds));
-            for (var i = 0; i < seconds; i++)
-            {
-                Console.Write("... ");
-                Thread.Sleep(1000);
-            }
+            source.Cancel();
             Console.WriteLine();
             return _ids.Count;
         }
-
-        private void MakeTimestampsMultithreaded(object cancellationToken)
-        {
-            _timestamps.Clear();
-            while (!((CancellationToken)cancellationToken).IsCancellationRequested)
-            {
-                var timestamp = ConcurrentStopwatch.GetMicroseconds(); 
-                if (!_timestamps.TryAdd(timestamp, DateTime.Now.TimeOfDay))
-                {
-                    var value = _timestamps[timestamp];
-                    var indexOf = _timestamps.Keys.ToList().IndexOf(timestamp);
-                    Console.WriteLine("Current timestamp count: {0}", _ids.Count);
-                    Console.WriteLine("Last Id: {0}", _newId);
-                    Console.WriteLine("ThreadId: {0}", Thread.CurrentThread.ManagedThreadId);
-                    Console.WriteLine("ThreadId of duplicate timestamp: {0}", value);
-                    Console.WriteLine("Index of existing item: {0}", indexOf);
-
-                    throw new InvalidOperationException("Duplicate timestamp!");
-                }
-            }
-        }
-
+        
         private void MakeIdsMultithreaded(object cancellationToken)
         {
             _ids.Clear();
             while (!((CancellationToken)cancellationToken).IsCancellationRequested)
             {
-                _newId = _generator.Value.NewId();
-                if (!_ids.TryAdd(_newId, Thread.CurrentThread.ManagedThreadId))
+                _newId = _generator.NewId();
+                if (!_ids.Add(_newId))
                 {
-                    var value = _ids[_newId];
-                    var indexOf = _ids.Keys.ToList().IndexOf(_newId);
                     Console.WriteLine("Current Count: {0}", _ids.Count);
                     Console.WriteLine("Last Id: {0}", _newId);
                     Console.WriteLine("ThreadId: {0}", Thread.CurrentThread.ManagedThreadId);
-                    Console.WriteLine("ThreadId of duplicate value: {0}", value);
-                    Console.WriteLine("Index of existing item: {0}", indexOf);
+                    Console.WriteLine("ThreadId of duplicate value: {0}", _newId);
 
                     throw new InvalidOperationException("Duplicate id!");
                 }

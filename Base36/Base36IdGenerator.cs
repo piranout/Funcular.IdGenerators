@@ -2,8 +2,8 @@
 
 // *********************************************************************************************************
 // Funcular.IdGenerators>Funcular.IdGenerators>Base36IdGenerator.cs
-// Created: 2015-06-26 2:57 PM
-// Updated: 2013-03-17 10:18 AM
+// Created: 2013-03-17 10:18 AM
+// Updated: 2016-04-13 10:42 AM
 // By: Paul Smith 
 // 
 // *********************************************************************************************************
@@ -42,7 +42,6 @@ using System.Configuration;
 using System.Diagnostics;
 using System.Linq;
 using System.Net;
-using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
 using Funcular.IdGenerators.BaseConversion;
@@ -78,6 +77,8 @@ namespace Funcular.IdGenerators.Base36
         private readonly int _numTimestampCharacters;
         private readonly string _reservedValue;
         private static string _hashBase36;
+        private static StringBuilder _sb = new StringBuilder();
+        private static byte[] _randomBuffer = new byte[8];
 
         #endregion
         #endregion
@@ -180,35 +181,34 @@ namespace Funcular.IdGenerators.Base36
         {
             // Keep access sequential so threads cannot accidentally
             // read another thread's values within this method:
-            var sb = new StringBuilder();
 
             // Microseconds since InService (using Stopwatch) provides the 
             // first n chars (n = _numTimestampCharacters):
-            lock(sb)
+            lock (_sb)
             {
-                long microseconds = GetMicrosecondsSafe();
+                _sb.Clear();
+                long microseconds = ConcurrentStopwatch.GetMicroseconds();
                 string base36Microseconds = Base36Converter.FromLong(microseconds);
                 if (base36Microseconds.Length > this._numTimestampCharacters)
                     base36Microseconds = base36Microseconds.Substring(0, this._numTimestampCharacters);
-                sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
+                _sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
 
-                sb.Append(_hostHash);
+                _sb.Append(_hostHash);
 
                 if (!string.IsNullOrWhiteSpace(this._reservedValue))
                 {
-                    sb.Append(this._reservedValue);
-                    sb.Length += this._reservedValue.Length; // Truncates
+                    _sb.Append(this._reservedValue);
                 }
                 // Add the random component:
-                sb.Append(GetRandomBase36DigitsSafe());
+                _sb.Append(GetRandomBase36DigitsSafe());
 
                 if (!delimited || string.IsNullOrWhiteSpace(_delimiter) || this._delimiterPositions == null)
-                    return sb.ToString();
+                    return _sb.ToString();
                 foreach (var pos in this._delimiterPositions)
                 {
-                    sb.Insert(pos, this._delimiter);
+                    _sb.Insert(pos, this._delimiter);
                 }
-                return sb.ToString();
+                return _sb.ToString();
             }
         }
 
@@ -268,9 +268,8 @@ namespace Funcular.IdGenerators.Base36
             lock (_randomLock)
             {
                 var maxRandom = (long)Math.Pow(36, length);
-                byte[] buffer = new byte[8];
-                _random.NextBytes(buffer);
-                var random = Math.Abs(BitConverter.ToInt64(buffer, 0) % maxRandom);
+                _random.NextBytes(_randomBuffer);
+                var random = Math.Abs(BitConverter.ToInt64(_randomBuffer, 0) % maxRandom);
                 string encoded = Base36Converter.FromLong(random);
                 return encoded.Length > length ?
                     encoded.Substring(0, length) :

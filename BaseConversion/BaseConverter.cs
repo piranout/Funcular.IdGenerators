@@ -79,8 +79,8 @@ namespace Funcular.IdGenerators.BaseConversion
             unchecked
             {
                 string result = null;
-                try
-                {
+                /*try
+                {*/
                     int length = number.Length;
                     result = string.Empty;
                     List<int> nibbles = number.Select(c => CharList.IndexOf(c)).ToList();
@@ -110,11 +110,11 @@ namespace Funcular.IdGenerators.BaseConversion
                         result = CharList[value] + result;
                     }
                     while (newlen != 0);
-                }
+                /*}
                 catch (Exception e)
                 {
                     Console.WriteLine(e);
-                }
+                }*/
                 return result;
             }
         }

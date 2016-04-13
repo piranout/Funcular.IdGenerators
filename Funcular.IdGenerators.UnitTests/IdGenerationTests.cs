@@ -42,7 +42,6 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Funcular.ExtensionMethods;
 using Funcular.IdGenerators.Base36;
 using Funcular.IdGenerators.Enums;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
@@ -99,7 +98,7 @@ namespace Funcular.IdGenerators.UnitTests
             string result;
             try
             {
-                Assert.IsTrue((result = this._idGenerator.ComputeHostHash("RD00155DC193F9")).HasValue());
+                Assert.IsTrue(!string.IsNullOrWhiteSpace(result = this._idGenerator.ComputeHostHash("RD00155DC193F9")));
             }
             catch (Exception e)
             {
@@ -179,7 +178,7 @@ namespace Funcular.IdGenerators.UnitTests
         public void Timestamp_Only_Throws_Overflow_When_Strict()
         {
             Assert.IsTrue
-                (_idGenerator.GetTimestamp(length: 10, resolution: TimestampResolution.Day, strict: false).HasValue());
+                (!string.IsNullOrWhiteSpace(_idGenerator.GetTimestamp(length: 10, resolution: TimestampResolution.Day, strict: false)));
         }
 
         [TestMethod]
