@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -12,8 +11,7 @@ namespace Funcular.IdGenerators.PerformanceTests
     {
         private readonly Base36IdGenerator _generator = new Base36IdGenerator(11, 4, 5, null, "-", new[] {15, 10, 5});
         private readonly HashSet<string> _ids = new HashSet<string>();
-        private readonly ConcurrentDictionary<long, TimeSpan> _timestamps = new ConcurrentDictionary<long, TimeSpan>();
-        
+
         [ThreadStatic]
         private static string _newId;
 
@@ -42,6 +40,7 @@ namespace Funcular.IdGenerators.PerformanceTests
 
         internal int TestTimestampUniqueness(int seconds, int threads)
         {
+            _ids.Clear();
             var source = new CancellationTokenSource();
             for (var i = 0; i < threads; i++)
             {
@@ -55,6 +54,7 @@ namespace Funcular.IdGenerators.PerformanceTests
 
         internal int TestMultithreaded(int seconds, int threads)
         {
+            _ids.Clear();
             var source = new CancellationTokenSource();
             for (var i = 0; i < threads; i++)
             {
@@ -68,18 +68,21 @@ namespace Funcular.IdGenerators.PerformanceTests
         
         private void MakeIdsMultithreaded(object cancellationToken)
         {
-            _ids.Clear();
             while (!((CancellationToken)cancellationToken).IsCancellationRequested)
             {
                 _newId = _generator.NewId();
-                if (!_ids.Add(_newId))
+                lock (_ids)
                 {
-                    Console.WriteLine("Current Count: {0}", _ids.Count);
-                    Console.WriteLine("Last Id: {0}", _newId);
-                    Console.WriteLine("ThreadId: {0}", Thread.CurrentThread.ManagedThreadId);
-                    Console.WriteLine("ThreadId of duplicate value: {0}", _newId);
 
-                    throw new InvalidOperationException("Duplicate id!");
+                    if (!_ids.Add(_newId))
+                    {
+                        Console.WriteLine("Current Count: {0}", _ids.Count);
+                        Console.WriteLine("Last Id: {0}", _newId);
+                        Console.WriteLine("ThreadId: {0}", Thread.CurrentThread.ManagedThreadId);
+                        Console.WriteLine("ThreadId of duplicate value: {0}", _newId);
+
+                        throw new InvalidOperationException("Duplicate id!");
+                    }
                 }
             }
         }
