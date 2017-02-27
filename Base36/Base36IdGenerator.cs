@@ -56,7 +56,6 @@ namespace Funcular.IdGenerators.Base36
         #region Private fields
         #region Static
         private static readonly object _randomLock;
-        private static string _hostHash;
         private static readonly Random _random = new Random();
         /// <summary>
         ///     This is UTC Epoch. In shorter Id implementations it was configurable, to allow
@@ -68,7 +67,7 @@ namespace Funcular.IdGenerators.Base36
 
 
         #region Instance
-
+        private readonly string _hostHash;
         private readonly string _delimiter;
         private readonly int[] _delimiterPositions;
         private readonly long _maxRandom;
@@ -76,9 +75,9 @@ namespace Funcular.IdGenerators.Base36
         private readonly int _numServerCharacters;
         private readonly int _numTimestampCharacters;
         private readonly string _reservedValue;
-        private static string _hashBase36;
-        private static StringBuilder _sb = new StringBuilder();
-        private static byte[] _randomBuffer = new byte[8];
+        private static string _hostHashBase36;
+        private static readonly StringBuilder _sb = new StringBuilder();
+        private static readonly byte[] _randomBuffer = new byte[8];
 
         #endregion
         #endregion
@@ -131,7 +130,8 @@ namespace Funcular.IdGenerators.Base36
             this._delimiterPositions = delimiterPositions;
 
             this._maxRandom = (long)Math.Pow(36d, numRandomCharacters);
-            _hostHash = ComputeHostHash();
+            var hostHash = ComputeHostHash();
+            _hostHash = hostHash;
 
             Debug.WriteLine("Instance constructor fired");
 
@@ -193,7 +193,8 @@ namespace Funcular.IdGenerators.Base36
                     base36Microseconds = base36Microseconds.Substring(0, this._numTimestampCharacters);
                 _sb.Append(base36Microseconds.PadLeft(this._numTimestampCharacters, '0'));
 
-                _sb.Append(_hostHash);
+                if(_numServerCharacters > 0)
+                    _sb.Append(_hostHash.Substring(0, _numServerCharacters));
 
                 if (!string.IsNullOrWhiteSpace(this._reservedValue))
                 {
@@ -238,8 +239,8 @@ namespace Funcular.IdGenerators.Base36
         /// <returns>2 character Base36 checksum of MD5 of hostname</returns>
         public string ComputeHostHash(string hostname = null)
         {
-            if (_hashBase36 != null)
-                return _hashBase36;
+            if (_hostHashBase36?.Length == _numServerCharacters)
+                return _hostHashBase36;
             if (string.IsNullOrWhiteSpace(hostname))
                 hostname = Dns.GetHostName()
                     ?? Environment.MachineName;
@@ -251,10 +252,7 @@ namespace Funcular.IdGenerators.Base36
                     hashHex = hashHex.Substring(0, 14);
             }
             string hashBase36 = Base36Converter.FromHex(hashHex);
-            _hashBase36 = hashBase36;
-            if (_hashBase36.Length > this._numServerCharacters)
-                _hashBase36 = _hashBase36.Substring(0, this._numServerCharacters);
-            return _hashBase36;
+            return hashBase36;
         }
 
         /// <summary>
@@ -352,7 +350,7 @@ namespace Funcular.IdGenerators.Base36
         {
             if (numTimestampCharacters > 12)
                 throw new ArgumentOutOfRangeException(nameof(numTimestampCharacters), "The maximum characters in any component is 12.");
-            if (numServerCharacters > 12)
+            if (numServerCharacters > 14)
                 throw new ArgumentOutOfRangeException(nameof(numServerCharacters), "The maximum characters in any component is 12.");
             if (numRandomCharacters > 12)
                 throw new ArgumentOutOfRangeException(nameof(numRandomCharacters), "The maximum characters in any component is 12.");

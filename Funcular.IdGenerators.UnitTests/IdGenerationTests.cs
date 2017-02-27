@@ -182,11 +182,52 @@ namespace Funcular.IdGenerators.UnitTests
         }
 
         [TestMethod]
-        public void Timestamp_Is_Expected_Length()
+        public void Timestamp_Is_Expected_Length_1()
         {
             Assert.IsTrue
                 (_idGenerator.GetTimestamp(length: 10, resolution: TimestampResolution.Day, strict: false).Length == 10);
         }
+
+        [TestMethod]
+        public void Id_Is_Expected_Length_1()
+        {
+            var generator = new Base36IdGenerator(
+              numTimestampCharacters: 7,
+              numServerCharacters: 6,
+              numRandomCharacters: 12);
+            var id = generator.NewId();
+            Assert.AreEqual(25, id.Length);
+        }
+
+        [TestMethod]
+        public void Id_Is_Expected_Length_2()
+        {
+            var shortGenerator = new Base36IdGenerator(
+              numTimestampCharacters: 3,
+              numServerCharacters: 0,
+              numRandomCharacters: 12);
+            var id2 = shortGenerator.NewId();
+            Assert.AreEqual(15, id2.Length);
+        }
+
+
+        [TestMethod]
+        public void Multiple_Generators_Produce_Expected_Lengths()
+        {
+			var generator = new Base36IdGenerator(
+                numTimestampCharacters: 12,
+                numServerCharacters: 6,
+                numRandomCharacters: 7);
+            
+			var shortGenerator = new Base36IdGenerator(
+              numTimestampCharacters: 3,
+              numServerCharacters: 0,
+              numRandomCharacters: 12);
+            var id1 = generator.NewId();
+            var id2 = shortGenerator.NewId();
+            Assert.AreEqual(25, id1.Length);
+            Assert.AreEqual(15, id2.Length);
+		}
     }
 }
 // ReSharper restore RedundantArgumentDefaultValue
