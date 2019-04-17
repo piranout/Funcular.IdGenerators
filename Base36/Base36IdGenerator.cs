@@ -127,7 +127,7 @@ namespace Funcular.IdGenerators.Base36
             this._numRandomCharacters = numRandomCharacters;
             this._reservedValue = reservedValue;
             this._delimiter = delimiter;
-            this._delimiterPositions = delimiterPositions;
+            this._delimiterPositions = delimiterPositions.OrderByDescending(x => x).ToArray();
 
             this._maxRandom = (long)Math.Pow(36d, numRandomCharacters);
             var hostHash = ComputeHostHash();
@@ -251,8 +251,7 @@ namespace Funcular.IdGenerators.Base36
                 if (hashHex.Length > 14) // > 14 chars overflows int64
                     hashHex = hashHex.Substring(0, 14);
             }
-            string hashBase36 = Base36Converter.FromHex(hashHex);
-            return hashBase36;
+            return _hostHashBase36 = Base36Converter.FromHex(hashHex);
         }
 
         /// <summary>
@@ -350,7 +349,7 @@ namespace Funcular.IdGenerators.Base36
         {
             if (numTimestampCharacters > 12)
                 throw new ArgumentOutOfRangeException(nameof(numTimestampCharacters), "The maximum characters in any component is 12.");
-            if (numServerCharacters > 14)
+            if (numServerCharacters > 12)
                 throw new ArgumentOutOfRangeException(nameof(numServerCharacters), "The maximum characters in any component is 12.");
             if (numRandomCharacters > 12)
                 throw new ArgumentOutOfRangeException(nameof(numRandomCharacters), "The maximum characters in any component is 12.");
