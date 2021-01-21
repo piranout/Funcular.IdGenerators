@@ -111,7 +111,6 @@ namespace Funcular.IdGenerators.Base36
         public Base36IdGenerator()
             : this(11, 4, 5, "", "-")
         {
-            this._delimiterPositions = new[] { 15, 10, 5 };
         }
 
         /// <summary>
@@ -122,12 +121,13 @@ namespace Funcular.IdGenerators.Base36
             // throw if any argument would cause out-of-range exceptions
             ValidateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
 
+            this._delimiterPositions = new[] { 15, 10, 5 };
             this._numTimestampCharacters = numTimestampCharacters;
             this._numServerCharacters = numServerCharacters;
             this._numRandomCharacters = numRandomCharacters;
             this._reservedValue = reservedValue;
             this._delimiter = delimiter;
-            this._delimiterPositions = delimiterPositions.OrderByDescending(x => x).ToArray();
+            this._delimiterPositions = (_delimiterPositions ?? new int[]{}).OrderByDescending(x => x).ToArray();
 
             this._maxRandom = (long)Math.Pow(36d, numRandomCharacters);
             var hostHash = ComputeHostHash();
