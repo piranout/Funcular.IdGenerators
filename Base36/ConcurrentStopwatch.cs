@@ -26,6 +26,19 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
+        /// Returns the time in microseconds since <paramref name="since"/>
+        /// </summary>
+        /// <param name="since"></param>
+        /// <returns></returns>
+        public static long GetMicroseconds(DateTimeOffset since)
+        {
+            lock (_lock)
+            {
+                return since.Subtract(_utcEpoch).Ticks / 10;
+            }
+        }
+
+        /// <summary>
         /// Returns the Unix time in microseconds (µ″ since UTC epoch)
         /// </summary>
         /// <returns></returns>
@@ -36,12 +49,13 @@ namespace Funcular.IdGenerators.Base36
                 long microseconds = 0;
                 while (microseconds <= _lastMicroseconds)
                 {
-                    microseconds = _timeZeroMicroseconds + (_sw.Elapsed.Ticks/10);
+                    microseconds = _timeZeroMicroseconds + (_sw.Elapsed.Ticks / 10);
                 }
                 _lastMicroseconds = microseconds;
                 return microseconds;
             }
 
         }
+
     }
 }

@@ -75,9 +75,10 @@ namespace Funcular.IdGenerators.Base36
         private readonly int _numServerCharacters;
         private readonly int _numTimestampCharacters;
         private readonly string _reservedValue;
+        private readonly TimestampResolution _timestampResolution;
         private static string _hostHashBase36;
-        private static readonly StringBuilder _sb = new StringBuilder();
         private static readonly byte[] _randomBuffer = new byte[8];
+        private static readonly StringBuilder _sb = new StringBuilder();
 
         #endregion
         #endregion
@@ -90,6 +91,14 @@ namespace Funcular.IdGenerators.Base36
 
         public DateTime EpochDate { get { return _epoch; } }
 
+        public int NumRandomCharacters => _numRandomCharacters;
+
+        public int NumServerCharacters => _numServerCharacters;
+
+        public int NumTimestampCharacters => _numTimestampCharacters;
+
+        public TimestampResolution Resolution => _timestampResolution;
+
         #endregion
 
 
@@ -101,7 +110,9 @@ namespace Funcular.IdGenerators.Base36
         /// </summary>
         static Base36IdGenerator()
         {
+            Debug.WriteLine("Static constructor begin");
             _randomLock = new object();
+            Debug.WriteLine("Static constructor finish");
         }
 
         ///     The default Id format is 11 characters for the timestamp (4170 year lifespan),
@@ -116,8 +127,10 @@ namespace Funcular.IdGenerators.Base36
         /// <summary>
         ///     The layout is Timestamp + Server Hash [+ Reserved] + Random.
         /// </summary>
-        public Base36IdGenerator(int numTimestampCharacters = 11, int numServerCharacters = 4, int numRandomCharacters = 5, string reservedValue = "", string delimiter = "-", int[] delimiterPositions = null)
+        public Base36IdGenerator(int numTimestampCharacters = 11, int numServerCharacters = 4, int numRandomCharacters = 5, string reservedValue = "", string delimiter = "-", int[] delimiterPositions = null, TimestampResolution resolution = TimestampResolution.Microsecond)
         {
+            Debug.WriteLine("Instance constructor begin");
+
             // throw if any argument would cause out-of-range exceptions
             ValidateConstructorArguments(numTimestampCharacters, numServerCharacters, numRandomCharacters);
 
@@ -127,25 +140,25 @@ namespace Funcular.IdGenerators.Base36
             this._numRandomCharacters = numRandomCharacters;
             this._reservedValue = reservedValue;
             this._delimiter = delimiter;
-            this._delimiterPositions = (_delimiterPositions ?? new int[]{}).OrderByDescending(x => x).ToArray();
-
+            this._timestampResolution = resolution;
+            this._delimiterPositions = (delimiterPositions ?? new int[]{}).OrderByDescending(x => x).ToArray();
             this._maxRandom = (long)Math.Pow(36d, numRandomCharacters);
+            
             var hostHash = ComputeHostHash();
-            _hostHash = hostHash;
-
-            Debug.WriteLine("Instance constructor fired");
-
-            string appSettingValue = null;
+            this._hostHash = hostHash;
+            
+            string base36IdInceptionDateAppSettingValue = null;
             if (ConfigurationManager.AppSettings.HasKeys()
                 && ConfigurationManager.AppSettings.AllKeys.Any(s => s.Equals("base36IdInceptionDate", StringComparison.OrdinalIgnoreCase))
-                && !string.IsNullOrWhiteSpace((appSettingValue = ConfigurationManager.AppSettings["base36IdInceptionDate"]) ?? ""))
+                && !string.IsNullOrWhiteSpace((base36IdInceptionDateAppSettingValue = ConfigurationManager.AppSettings["base36IdInceptionDate"]) ?? ""))
             {
-                DateTime inService;
-                if (DateTime.TryParse(appSettingValue, out inService))
+                if (DateTime.TryParse(base36IdInceptionDateAppSettingValue, out var inService))
                     _epoch = inService;
             }
 
             InitStaticMicroseconds();
+        
+            Debug.WriteLine("Instance constructor finish");
         }
 
         #endregion
@@ -168,16 +181,49 @@ namespace Funcular.IdGenerators.Base36
             return NewId(false);
         }
 
+
+
+        /// <summary>
+        ///     Generates a unique, sequential, Base36 string with the timestamp component
+        /// set as if it were created on <paramref name="creationTimestamp"/>.
+        ///     If this instance was instantiated using 
+        ///     the default constructor, it will be 20 characters long.
+        ///     The first 11 characters are the microseconds elapsed since the InService DateTime
+        ///     (Epoch by default).
+        ///     The next 4 characters are the SHA1 of the hostname in Base36.
+        ///     The last 5 characters are random Base36 number between 0 and 36 ^ 5.
+        /// </summary>
+        /// <returns>Returns a unique, sequential, 20-character Base36 string</returns>
+        public string NewId(DateTime creationTimestamp)
+        {
+            return NewId(creationTimestamp, false);
+        }
+
+
+        /// <summary>
+        ///     Generates a unique, sequential, Base36 string. If this instance was instantiated using 
+        ///     the default constructor, it will be 20 characters long.
+        ///     The first 11 characters are the microseconds elapsed since the InService DateTime
+        ///     (Epoch by default).
+        ///     The next 4 characters are the SHA1 of the hostname in Base36.
+        ///     The last 5 characters are random Base36 number between 0 and 36 ^ 5.
+        /// </summary>
+        /// <returns>Returns a unique, sequential, 20-character Base36 string</returns>
+        public string NewId(DateTime creationTimestamp, bool delimited)
+        {
+            return NewId(false);
+        }
+
         /// <summary>
         ///     Generates a unique, sequential, Base36 string; you control the len
         ///     The first 10 characters are the microseconds elapsed since the InService DateTime
-        ///     (constant field you hardcode in this file).
+        ///     (constant field you hard-code in this file).
         ///     The next 2 characters are a compressed checksum of the MD5 of this host.
         ///     The next 1 character is a reserved constant of 36 ('Z' in Base36).
         ///     The last 3 characters are random number less than 46655 additional for additional uniqueness.
         /// </summary>
         /// <returns>Returns a unique, sequential, 16-character Base36 string</returns>
-        public string NewId(bool delimited)
+        public string NewId(bool delimited, DateTime? creationTimestamp = null)
         {
             // Keep access sequential so threads cannot accidentally
             // read another thread's values within this method:
@@ -187,7 +233,10 @@ namespace Funcular.IdGenerators.Base36
             lock (_sb)
             {
                 _sb.Clear();
-                long microseconds = ConcurrentStopwatch.GetMicroseconds();
+                long microseconds = creationTimestamp == null 
+                    ? ConcurrentStopwatch.GetMicroseconds()
+                    : ConcurrentStopwatch.GetMicroseconds(creationTimestamp.Value);
+
                 string base36Microseconds = Base36Converter.FromLong(microseconds);
                 if (base36Microseconds.Length > this._numTimestampCharacters)
                     base36Microseconds = base36Microseconds.Substring(0, this._numTimestampCharacters);
@@ -216,7 +265,7 @@ namespace Funcular.IdGenerators.Base36
         /// <summary>
         /// Given a non-delimited Id, format it with the current instance’s
         /// delimiter and delimiter positions. If Id already contains delimiter,
-        /// or is null or empy, returns Id unmodified.
+        /// or is null or empty, returns Id unmodified.
         /// </summary>
         /// <param name="id"></param>
         /// <returns></returns>
@@ -280,7 +329,7 @@ namespace Funcular.IdGenerators.Base36
         /// default resolution of Microseconds, 5 character values are exhausted in 1 minute.
         /// 6 characters = ½ hour. 7 characters = 21 hours. 8 characters = 1 month.
         /// 9 characters = 3 years. 10 characters = 115 years. 11 characters = 4170 years.
-        /// 12 characteres = 150 thousand years.
+        /// 12 characters = 150 thousand years.
         /// </summary>
         /// <param name="length"></param>
         /// <param name="resolution"></param>
@@ -363,20 +412,6 @@ namespace Funcular.IdGenerators.Base36
         }
 
         /// <summary>
-        ///     Returns value with all non base 36 characters removed. Uses mutex.
-        /// </summary>
-        /// <returns></returns>
-        /// <summary>
-        ///     Return the elapsed microseconds since the in-service DateTime; will never
-        ///     return the same value twice, even across multiple processes.
-        /// </summary>
-        /// <returns></returns>
-        internal static long GetMicrosecondsSafe()
-        {
-            return ConcurrentStopwatch.GetMicroseconds();
-        }
-
-        /// <summary>
         ///     Return the elapsed microseconds since the in-service DateTime; will never
         ///     return the same value twice. Uses a high-resolution Stopwatch (not DateTime.Now)
         ///     to measure durations.
@@ -389,6 +424,8 @@ namespace Funcular.IdGenerators.Base36
 
         private static void InitStaticMicroseconds()
         {
+            // Just make sure ConcurrentStopwatch.GetMicroseconds gets called. That internally 
+            // handles all initialization:
             GetMicroseconds();
         }
 
@@ -413,7 +450,77 @@ namespace Funcular.IdGenerators.Base36
             }
         }
 
+        public IdInformation Parse(string id)
+        {
+            if(id == null)
+                throw new ArgumentException("Id cannot be null", nameof(id));
+            if (id.Length == 0)
+                return IdInformation.Default;
+
+            var info = new IdInformation();
+            int index = 0;
+            if (_numTimestampCharacters > 0)
+            {
+                info.TimestampComponent = id.Substring(index, _numTimestampCharacters);
+                index += _numTimestampCharacters;
+            }
+
+            if (_numServerCharacters > 0)
+            {
+                info.HashComponent = id.Substring(index - 1, _numServerCharacters);
+                index += _numServerCharacters;
+            }
+
+            if (_numRandomCharacters > 0)
+            {
+                info.RandomComponent = id.Substring(index - 1, _numRandomCharacters);
+                index += _numServerCharacters;
+            }
+
+            long intervals = Base36Converter.Decode(info.TimestampComponent);
+            DateTime result;
+            switch (this._timestampResolution)
+            {
+                case TimestampResolution.Day:
+                    result = _epoch.AddDays(intervals);
+                    break;
+                case TimestampResolution.Hour:
+                    result = _epoch.AddHours(intervals);
+                    break;
+                case TimestampResolution.Minute:
+                    result = _epoch.AddMinutes(intervals);
+                    break;
+                case TimestampResolution.Second:
+                    result = _epoch.AddSeconds(intervals);
+                    break;
+                case TimestampResolution.Millisecond:
+                    result = _epoch.AddMilliseconds(intervals);
+                    break;
+                case TimestampResolution.Ticks:
+                    result = _epoch.AddTicks(intervals);
+                    break;
+                case TimestampResolution.Microsecond:
+                default:
+                    result = _epoch.AddTicks(intervals / 10L);
+                    break;
+            }
+
+            info.CreationTimestamp = result;
+
+            return info;
+        }
+
         #endregion
+    }
+
+    public class IdInformation
+    {
+        public static IdInformation Default = new IdInformation();
+        public int Base { get; set; }
+        public string TimestampComponent { get; set; }
+        public string HashComponent { get; set; }
+        public string RandomComponent { get; set; }
+        public DateTime? CreationTimestamp { get; set; }
     }
 }
 // ReSharper restore RedundantCaseLabel

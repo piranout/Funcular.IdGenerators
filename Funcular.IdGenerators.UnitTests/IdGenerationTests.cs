@@ -161,6 +161,40 @@ namespace Funcular.IdGenerators.UnitTests
         }
 
         [TestMethod]
+        public void Id_With_20_Chars_Parses_Correctly()
+        {
+            var x = DateTime.UtcNow;
+            var id = _idGenerator.NewId();
+            var info = _idGenerator.Parse(id);
+
+
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            Assert.IsTrue(info.CreationTimestamp?.Subtract(x).TotalMilliseconds < 1);
+            
+            var length = id.Length;
+            var formatted = _idGenerator.Format(id);
+            Assert.IsTrue(formatted.Contains(_delimiter) && formatted.Length == length + (_delimiter.Length * _delimiterPositions.Length));
+        }
+
+
+        [TestMethod]
+        public void Id_With_16_Chars_Parses_Correctly()
+        {
+            var generator = new Base36IdGenerator(10, 2,4);
+            var x = DateTime.UtcNow;
+            var id = _idGenerator.NewId();
+            var info = _idGenerator.Parse(id);
+
+
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            Assert.IsTrue(info.CreationTimestamp?.Subtract(x).TotalMilliseconds < 1);
+
+            var length = id.Length;
+            var formatted = _idGenerator.Format(id);
+            Assert.IsTrue(formatted.Contains(_delimiter) && formatted.Length == length + (_delimiter.Length * _delimiterPositions.Length));
+        }
+
+        [TestMethod]
         [ExpectedException(typeof(ArgumentOutOfRangeException))]
         public void Timestamps_Throw_Out_Of_Range()
         {
