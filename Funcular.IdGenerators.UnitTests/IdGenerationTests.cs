@@ -163,13 +163,32 @@ namespace Funcular.IdGenerators.UnitTests
         [TestMethod]
         public void Id_With_20_Chars_Parses_Correctly()
         {
-            var x = DateTime.UtcNow;
-            var id = _idGenerator.NewId();
+            var creationTimestamp = DateTime.UtcNow;
+            var id = _idGenerator.NewId(creationTimestamp);
             var info = _idGenerator.Parse(id);
 
 
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            Assert.IsTrue(info.CreationTimestamp?.Subtract(x).TotalMilliseconds < 1);
+            double totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
+
+            // make sure local datetime values work as well:
+            creationTimestamp = DateTime.Now;
+            id = _idGenerator.NewId(creationTimestamp);
+            info = _idGenerator.Parse(id);
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
+
+
+            // make sure arbitrary datetime values work as well:
+            creationTimestamp = new DateTime(2000, 1,1);
+            id = _idGenerator.NewId(creationTimestamp);
+            info = _idGenerator.Parse(id);
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
+
             
             var length = id.Length;
             var formatted = _idGenerator.Format(id);
@@ -180,14 +199,31 @@ namespace Funcular.IdGenerators.UnitTests
         [TestMethod]
         public void Id_With_16_Chars_Parses_Correctly()
         {
-            var generator = new Base36IdGenerator(10, 2,4);
-            var x = DateTime.UtcNow;
-            var id = _idGenerator.NewId();
+            var generator = new Base36IdGenerator(11, 2,3);
+            var creationTimestamp = DateTime.UtcNow;
+            var id = _idGenerator.NewId(creationTimestamp);
             var info = _idGenerator.Parse(id);
 
-
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            Assert.IsTrue(info.CreationTimestamp?.Subtract(x).TotalMilliseconds < 1);
+            double totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
+
+            // make sure local datetime values work as well:
+            creationTimestamp = DateTime.Now;
+            id = _idGenerator.NewId(creationTimestamp);
+            info = _idGenerator.Parse(id);
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
+
+
+            // make sure arbitrary datetime values work as well:
+            creationTimestamp = new DateTime(2000, 1, 1);
+            id = _idGenerator.NewId(creationTimestamp);
+            info = _idGenerator.Parse(id);
+            Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
+            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
             var length = id.Length;
             var formatted = _idGenerator.Format(id);

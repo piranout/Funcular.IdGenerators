@@ -196,22 +196,7 @@ namespace Funcular.IdGenerators.Base36
         /// <returns>Returns a unique, sequential, 20-character Base36 string</returns>
         public string NewId(DateTime creationTimestamp)
         {
-            return NewId(creationTimestamp, false);
-        }
-
-
-        /// <summary>
-        ///     Generates a unique, sequential, Base36 string. If this instance was instantiated using 
-        ///     the default constructor, it will be 20 characters long.
-        ///     The first 11 characters are the microseconds elapsed since the InService DateTime
-        ///     (Epoch by default).
-        ///     The next 4 characters are the SHA1 of the hostname in Base36.
-        ///     The last 5 characters are random Base36 number between 0 and 36 ^ 5.
-        /// </summary>
-        /// <returns>Returns a unique, sequential, 20-character Base36 string</returns>
-        public string NewId(DateTime creationTimestamp, bool delimited)
-        {
-            return NewId(false);
+            return NewId(false, creationTimestamp);
         }
 
         /// <summary>
@@ -235,7 +220,7 @@ namespace Funcular.IdGenerators.Base36
                 _sb.Clear();
                 long microseconds = creationTimestamp == null 
                     ? ConcurrentStopwatch.GetMicroseconds()
-                    : ConcurrentStopwatch.GetMicroseconds(creationTimestamp.Value);
+                    : ConcurrentStopwatch.GetMicroseconds(creationTimestamp.Value.ToUniversalTime());
 
                 string base36Microseconds = Base36Converter.FromLong(microseconds);
                 if (base36Microseconds.Length > this._numTimestampCharacters)
@@ -362,7 +347,7 @@ namespace Funcular.IdGenerators.Base36
                     intervals = Convert.ToInt64(elapsed.TotalMilliseconds);
                     break;
                 case TimestampResolution.Microsecond:
-                    intervals = (long)(elapsed.TotalMilliseconds * 1000.0); // elapsed.TotalMicroseconds();
+                    intervals = elapsed.Ticks / 10;
                     break;
                 case TimestampResolution.Ticks:
                     intervals = elapsed.Ticks;
@@ -376,7 +361,8 @@ namespace Funcular.IdGenerators.Base36
             {
                 if (strict)
                 {
-                    throw new OverflowException(string.Format("At resolution {0}, value is greater than {1}-character timestamps can express.", resolution.ToString(), length));
+                    throw new OverflowException(
+                        $"At resolution {resolution.ToString()}, value is greater than {length}-character timestamps can express.");
                 }
                 intervals = intervals % 36;
             }
@@ -426,7 +412,7 @@ namespace Funcular.IdGenerators.Base36
         {
             // Just make sure ConcurrentStopwatch.GetMicroseconds gets called. That internally 
             // handles all initialization:
-            GetMicroseconds();
+            Console.WriteLine(GetMicroseconds());
         }
 
         /// <summary>
@@ -457,7 +443,7 @@ namespace Funcular.IdGenerators.Base36
             if (id.Length == 0)
                 return IdInformation.Default;
 
-            var info = new IdInformation();
+            var info = new IdInformation(){ Base = 36 };
             int index = 0;
             if (_numTimestampCharacters > 0)
             {
@@ -501,7 +487,7 @@ namespace Funcular.IdGenerators.Base36
                     break;
                 case TimestampResolution.Microsecond:
                 default:
-                    result = _epoch.AddTicks(intervals / 10L);
+                    result = _epoch.AddTicks(intervals * 10L);
                     break;
             }
 
@@ -511,16 +497,6 @@ namespace Funcular.IdGenerators.Base36
         }
 
         #endregion
-    }
-
-    public class IdInformation
-    {
-        public static IdInformation Default = new IdInformation();
-        public int Base { get; set; }
-        public string TimestampComponent { get; set; }
-        public string HashComponent { get; set; }
-        public string RandomComponent { get; set; }
-        public DateTime? CreationTimestamp { get; set; }
     }
 }
 // ReSharper restore RedundantCaseLabel
