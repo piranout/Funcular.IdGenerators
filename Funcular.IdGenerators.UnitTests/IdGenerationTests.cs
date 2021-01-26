@@ -169,7 +169,7 @@ namespace Funcular.IdGenerators.UnitTests
 
 
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            double totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            double totalMilliseconds = info.CreationTimestampUtc?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
             // make sure local datetime values work as well:
@@ -177,7 +177,7 @@ namespace Funcular.IdGenerators.UnitTests
             id = _idGenerator.NewId(creationTimestamp);
             info = _idGenerator.Parse(id);
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            totalMilliseconds = info.CreationTimestampUtc.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
 
@@ -186,7 +186,7 @@ namespace Funcular.IdGenerators.UnitTests
             id = _idGenerator.NewId(creationTimestamp);
             info = _idGenerator.Parse(id);
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            totalMilliseconds = info.CreationTimestampUtc.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
             
@@ -205,7 +205,7 @@ namespace Funcular.IdGenerators.UnitTests
             var info = _idGenerator.Parse(id);
 
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            double totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            double totalMilliseconds = info.CreationTimestampUtc?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
             // make sure local datetime values work as well:
@@ -213,7 +213,7 @@ namespace Funcular.IdGenerators.UnitTests
             id = _idGenerator.NewId(creationTimestamp);
             info = _idGenerator.Parse(id);
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            totalMilliseconds = info.CreationTimestamp?.Subtract(creationTimestamp).TotalMilliseconds ?? 100;
+            totalMilliseconds = info.CreationTimestampUtc?.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds ?? 100;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
 
@@ -222,7 +222,7 @@ namespace Funcular.IdGenerators.UnitTests
             id = _idGenerator.NewId(creationTimestamp);
             info = _idGenerator.Parse(id);
             Assert.IsTrue(info.TimestampComponent.Length == _idGenerator.NumTimestampCharacters);
-            totalMilliseconds = info.CreationTimestamp.Value.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds;
+            totalMilliseconds = info.CreationTimestampUtc?.ToLocalTime().Subtract(creationTimestamp).TotalMilliseconds ?? 100;
             Assert.IsTrue(Math.Abs(totalMilliseconds) < 1);
 
             var length = id.Length;

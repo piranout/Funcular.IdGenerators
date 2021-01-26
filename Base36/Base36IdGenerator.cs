@@ -491,7 +491,7 @@ namespace Funcular.IdGenerators.Base36
                     break;
             }
 
-            info.CreationTimestamp = result;
+            info.CreationTimestampUtc = result;
 
             return info;
         }
