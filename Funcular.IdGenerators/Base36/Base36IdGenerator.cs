@@ -279,7 +279,7 @@ namespace Funcular.IdGenerators.Base36
                 hostname = Dns.GetHostName()
                     ?? Environment.MachineName;
             string hashHex;
-            using (var sha1 = new SHA1Managed())
+            using (var sha1 = SHA1.Create())
             {
                 hashHex = BitConverter.ToString(sha1.ComputeHash(Encoding.UTF8.GetBytes(hostname)));
                 if (hashHex.Length > 14) // > 14 chars overflows int64
