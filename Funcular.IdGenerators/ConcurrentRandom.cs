@@ -7,24 +7,28 @@ namespace Funcular.IdGenerators
     {
         [ThreadStatic]
         private static Random _random;
-        private static readonly object _lock = new object();
-        private static long _maxRandom;
+        private static readonly object Lock = new object();
         private static long _lastValue;
-        private static readonly RNGCryptoServiceProvider _rngCryptoServiceProvider;
+#if !NET6_0
+        private static readonly RNGCryptoServiceProvider RngCryptoServiceProvider;
+#endif
+
 
         static ConcurrentRandom()
         {
-            _rngCryptoServiceProvider = new RNGCryptoServiceProvider();
+#if !NET6_0
+            RngCryptoServiceProvider = new RNGCryptoServiceProvider();
+#endif
         }
 
         public static long NextLong()
         {
-            lock (_lock)
+            lock (Lock)
             {
                 long value;
                 do
                 {
-                    value = (long)(Random.NextDouble() * _maxRandom);
+                    value = (long)(Random.NextDouble() * MaxRandom);
                 } while (value == _lastValue);
                 _lastValue = value;
                 return value;
@@ -35,19 +39,21 @@ namespace Funcular.IdGenerators
         {
             get
             {
-                if (_random != null) 
+                if (_random != null)
                     return _random;
                 var cryptoResult = new byte[4];
-                _rngCryptoServiceProvider.GetBytes(cryptoResult);
+#if NET6_0
+                cryptoResult = RandomNumberGenerator.GetBytes(4);
+#else
+                RngCryptoServiceProvider.GetBytes(cryptoResult);
+#endif
+
                 int seed = BitConverter.ToInt32(cryptoResult, 0);
                 _random = new Random(seed);
                 return _random;
             }
         }
-        public static long MaxRandom
-        {
-            get { return _maxRandom; }
-            set { _maxRandom = value; }
-        }
+
+        public static long MaxRandom { get; set; }
     }
 }

@@ -1,0 +1,47 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<TargetFrameworks>net461;netstandard2.0;netstandard2.1;net5.0;net6.0</TargetFrameworks>
+		<LangVersion>latest</LangVersion>
+		<PackageId>Funcular.IdGenerators</PackageId>
+		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+		<Version>3.0.0</Version>
+		<Title>Funcular Labs Id Generators</Title>
+		<Authors>Paul C Smith and Funcular Labs</Authors>
+		<Owners>Funcular Labs</Owners>
+		<Description>K-ordered, semi-random, distributed unique Id generator using base 36. Solves several weaknesses of integer, Guid and SequentialGuid identifiers.</Description>
+		<NeutralLanguage>en</NeutralLanguage>
+		<PackageTags>c# base-36 id-generator</PackageTags>
+		<RepositoryUrl>https://github.com/piranout/Funcular.IdGenerators</RepositoryUrl>
+		<RepositoryType></RepositoryType>
+		<PackageProjectUrl>https://github.com/piranout/Funcular.IdGenerators</PackageProjectUrl>
+		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<PackageReleaseNotes>- Add support for NetStandard, NET5, NET6</PackageReleaseNotes>
+		<Summmary>
+			Distributed, K-ordered, stateless Id Generator, also creates random values and time stamps in base 36. Along the lines of Short Guid and Snowflake, with an eye towards human readability, concurrency,
+			and having no external dependencies. These are much more amenable to clustered indexing than Guids, and easier than sequential guids to synchronize in distributed environments and SQL Server.
+		</Summmary>
+		<Copyright>© 2013 - 2022 Funcular Labs and Paul C Smit</Copyright>
+		<!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<!-- Optional: Embed source files that are not tracked by the source control manager in the PDB -->
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
+		<PublishRepositoryUrl>true</PublishRepositoryUrl>
+		<ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+		<DebugType>portable</DebugType>
+		<DebugSymbols>true</DebugSymbols>
+		<NoWarn>1701;1702;NU1701</NoWarn>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
+		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+	</ItemGroup>
+
+</Project>
