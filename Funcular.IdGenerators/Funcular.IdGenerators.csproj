@@ -4,7 +4,7 @@
 		<LangVersion>latest</LangVersion>
 		<PackageId>Funcular.IdGenerators</PackageId>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>3.0.1</Version>
+		<Version>3.0.2</Version>
 		<Title>Funcular Labs Id Generators</Title>
 		<Authors>Paul C Smith and Funcular Labs</Authors>
 		<Owners>Funcular Labs</Owners>
@@ -16,12 +16,13 @@
 		<PackageProjectUrl>https://github.com/piranout/Funcular.IdGenerators</PackageProjectUrl>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
-		<PackageReleaseNotes>- Add support for NetStandard, NET5, NET6</PackageReleaseNotes>
+		<PackageReleaseNotes>- Added support for NetStandard, NET5, NET6, NET8</PackageReleaseNotes>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Summmary>
 			Distributed, K-ordered, stateless Id Generator, also creates random values and time stamps in base 36. Along the lines of Short Guid and Snowflake, with an eye towards human readability, concurrency,
 			and having no external dependencies. These are much more amenable to clustered indexing than Guids, and easier than sequential guids to synchronize in distributed environments and SQL Server.
 		</Summmary>
-		<Copyright>© 2013 - 2022 Funcular Labs and Paul C Smit</Copyright>
+		<Copyright>©2013 - 2025 Funcular Labs, Inc. and Paul C Smith</Copyright>
 		<!-- Optional: Build symbol package (.snupkg) to distribute the PDB containing Source Link -->
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
@@ -32,6 +33,7 @@
 		<ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
 		<ApplicationIcon>funcular-logo-angle-brackets-dark.ico</ApplicationIcon>
 		<Nullable>disable</Nullable>
+		<PackageIcon>funcular-logo-angle-brackets-dark.png</PackageIcon>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -44,10 +46,29 @@
 	  <Content Include="funcular-logo-angle-brackets-dark.ico" />
 	</ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\README.md">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
 
-	<ItemGroup>
+  <ItemGroup>
+    <None Include="funcular-logo-angle-brackets-dark.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
 		<PackageReference Include="System.Configuration.ConfigurationManager" Version="6.0.0" />
 		<PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="README.md">
+	    <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+	  </None>
 	</ItemGroup>
 
 </Project>
