@@ -3,13 +3,13 @@
 // *********************************************************************************************************
 // Funcular.IdGenerators>Funcular.IdGenerators>Base36IdGenerator.cs
 // Created: 2013-03-17 10:18 AM
-// Updated: 2016-04-13 10:42 AM
+// Updated: 2025-08-30 03:15 PM
 // By: Paul Smith 
 // 
 // *********************************************************************************************************
 // LICENSE: The MIT License (MIT)
 // *********************************************************************************************************
-// Copyright (c) 2010-2015 <copyright holders>
+// Copyright (c) 2010-2025 <copyright holders>
 // 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal

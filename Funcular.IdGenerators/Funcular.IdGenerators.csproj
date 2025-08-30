@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFrameworks>net461;netstandard2.0;netstandard2.1;net5.0;net6.0</TargetFrameworks>
+		<TargetFrameworks>net461;netstandard2.0;netstandard2.1;net5.0;net6.0;net8.0</TargetFrameworks>
 		<LangVersion>latest</LangVersion>
 		<PackageId>Funcular.IdGenerators</PackageId>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-		<Version>3.0.0</Version>
+		<Version>3.0.1</Version>
 		<Title>Funcular Labs Id Generators</Title>
 		<Authors>Paul C Smith and Funcular Labs</Authors>
 		<Owners>Funcular Labs</Owners>
@@ -30,6 +30,8 @@
 		<!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
 		<PublishRepositoryUrl>true</PublishRepositoryUrl>
 		<ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+		<ApplicationIcon>funcular-logo-angle-brackets-dark.ico</ApplicationIcon>
+		<Nullable>disable</Nullable>
 	</PropertyGroup>
 
 	<PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -37,6 +39,10 @@
 		<DebugSymbols>true</DebugSymbols>
 		<NoWarn>1701;1702;NU1701</NoWarn>
 	</PropertyGroup>
+
+	<ItemGroup>
+	  <Content Include="funcular-logo-angle-brackets-dark.ico" />
+	</ItemGroup>
 
 
 	<ItemGroup>
